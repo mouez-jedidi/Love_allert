@@ -67,9 +67,9 @@ export default function SplashScreen({ navigation }) {
         <Text style={styles.tagline}>RENCONTRES RÉELLES · GPS</Text>
 
         {/* Button */}
-        <TouchableOpacity style={styles.btn}>
-          <Text style={styles.btnText}>Créer mon profil</Text>
-        </TouchableOpacity>
+<TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Auth')}>
+  <Text style={styles.btnText}>Créer mon profil</Text>
+</TouchableOpacity>
 
         <Text style={styles.loginLink}>J'ai déjà un compte</Text>
 
