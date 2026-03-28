@@ -1,6 +1,6 @@
 const Match = require('../models/Match');
 const User = require('../models/User');
-
+const { sendMatchNotification } = require('../config/firebase');
 // Calculate compatibility score
 const calculateScore = (user1, user2) => {
   let score = 0;
@@ -76,10 +76,18 @@ exports.checkNearby = async (req, res) => {
           compatibilityScore: score,
         });
 
-        matches.push({
-          matchId: match._id,
-          score,
-        });
+// Send notifications to both users
+if (currentUser.fcmToken) {
+  await sendMatchNotification(currentUser.fcmToken, match._id.toString());
+}
+if (nearUser.fcmToken) {
+  await sendMatchNotification(nearUser.fcmToken, match._id.toString());
+}
+
+matches.push({
+  matchId: match._id,
+  score,
+});
       }
     }
 

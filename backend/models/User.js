@@ -55,6 +55,7 @@ const UserSchema = new mongoose.Schema({
   maxDistance: { type: Number, default: 500 }, // meters
 
   // App data
+  fcmToken: { type: String, default: null },
   isActive: { type: Boolean, default: true },
   lastSeen: { type: Date, default: Date.now },
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

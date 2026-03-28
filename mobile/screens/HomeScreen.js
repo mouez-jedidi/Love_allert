@@ -1,3 +1,11 @@
+import {
+  registerForNotifications,
+  onNotificationResponse,
+} from '../services/notifications';
+import { useEffect, useRef } from 'react';
+import { startGPS, stopGPS } from '../services/gps';
+import { connectSocket, disconnectSocket } from '../services/socket';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNav from '../components/BottomNav';
 import { useEffect, useRef } from 'react';
 import {
@@ -78,7 +86,34 @@ export default function HomeScreen({ navigation }) {
       ])
     ).start();
   }, []);
+useEffect(() => {
+  initApp();
+  return () => {
+    stopGPS();
+    disconnectSocket();
+  };
+}, []);
 
+const initApp = async () => {
+  // Connect socket
+  await connectSocket();
+
+  // Register for notifications
+  await registerForNotifications();
+
+  // Handle notification tap → navigate to Match screen
+  onNotificationResponse((response) => {
+    const matchId = response.notification.request.content.data?.matchId;
+    if (matchId) {
+      navigation.navigate('Match', { matchId });
+    }
+  });
+
+  // Start GPS
+  await startGPS((match) => {
+    navigation.navigate('Match', { matchId: match.matchId });
+  });
+};
   return (
     <SafeAreaView style={styles.container}>
 
