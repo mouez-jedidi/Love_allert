@@ -309,9 +309,14 @@ export default function ChatScreen({ navigation, route }) {
             }
           </View>
         </View>
-        <TouchableOpacity style={styles.moreBtn}>
-          <Text style={styles.moreBtnText}>⋯</Text>
-        </TouchableOpacity>
+<TouchableOpacity
+  style={styles.moreBtn}
+  onPress={() => navigation.navigate('BlockReport', {
+    matchId,
+    userId: null,
+  })}>
+  <Text style={styles.moreBtnText}>⋯</Text>
+</TouchableOpacity>
       </View>
 
       {/* Milestone toast */}

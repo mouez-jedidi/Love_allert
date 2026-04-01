@@ -66,7 +66,27 @@ exports.getNearbyUsers = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// @route DELETE /api/users/account
+exports.deleteAccount = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user.id);
+    res.json({ message: 'Compte supprimé' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
+// @route POST /api/users/report
+exports.reportUser = async (req, res) => {
+  try {
+    const { reportedUserId, matchId, reason, details } = req.body;
+    console.log(`🚨 Report: ${req.user.id} reported ${reportedUserId} for: ${reason}`);
+    // In production, save to a Reports collection
+    res.json({ message: 'Signalement envoyé' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 // @route POST /api/users/block/:id
 exports.blockUser = async (req, res) => {
   try {
@@ -74,6 +94,40 @@ exports.blockUser = async (req, res) => {
       $addToSet: { blockedUsers: req.params.id },
     });
     res.json({ message: 'Utilisateur bloqué' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// @route POST /api/users/gallery
+exports.addToGallery = async (req, res) => {
+  try {
+    const { photoUrl } = req.body;
+    await User.findByIdAndUpdate(req.user.id, {
+      $push: { gallery: photoUrl },
+    });
+    res.json({ message: 'Photo ajoutée' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @route DELETE /api/users/gallery/:photoUrl
+exports.removeFromGallery = async (req, res) => {
+  try {
+    const photoUrl = decodeURIComponent(req.params.photoUrl);
+    await User.findByIdAndUpdate(req.user.id, {
+      $pull: { gallery: photoUrl },
+    });
+    res.json({ message: 'Photo supprimée' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// @route GET /api/users/:id/gallery
+exports.getUserGallery = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('gallery');
+    res.json({ gallery: user?.gallery || [] });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

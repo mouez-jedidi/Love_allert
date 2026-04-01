@@ -7,7 +7,7 @@ import { startGPS, stopGPS } from '../services/gps';
 import { connectSocket, disconnectSocket } from '../services/socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNav from '../components/BottomNav';
-import { useEffect, useRef } from 'react';
+import { API_URL } from '../config';
 import {
   View, Text, StyleSheet, Animated,
   Easing, SafeAreaView, TouchableOpacity,
@@ -95,24 +95,36 @@ useEffect(() => {
 }, []);
 
 const initApp = async () => {
-  // Connect socket
-  await connectSocket();
-
-  // Register for notifications
-  await registerForNotifications();
-
-  // Handle notification tap → navigate to Match screen
-  onNotificationResponse((response) => {
-    const matchId = response.notification.request.content.data?.matchId;
-    if (matchId) {
-      navigation.navigate('Match', { matchId });
+  try {
+    // Make sure token exists before starting
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      console.log('❌ No token found, redirecting to login');
+      navigation.navigate('Splash');
+      return;
     }
-  });
 
-  // Start GPS
-  await startGPS((match) => {
-    navigation.navigate('Match', { matchId: match.matchId });
-  });
+    // Connect socket
+    await connectSocket();
+
+    // Register for notifications
+    await registerForNotifications();
+
+    // Handle notification tap
+    onNotificationResponse((response) => {
+      const matchId = response.notification.request.content.data?.matchId;
+      if (matchId) navigation.navigate('Match', { matchId });
+    });
+
+    // Start GPS
+    await startGPS((match) => {
+      navigation.navigate('Match', { matchId: match.matchId });
+    });
+
+    console.log('✅ App initialized');
+  } catch (err) {
+    console.log('❌ Init error:', err.message);
+  }
 };
   return (
     <SafeAreaView style={styles.container}>

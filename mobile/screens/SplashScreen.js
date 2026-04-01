@@ -71,8 +71,9 @@ export default function SplashScreen({ navigation }) {
   <Text style={styles.btnText}>Créer mon profil</Text>
 </TouchableOpacity>
 
-        <Text style={styles.loginLink}>J'ai déjà un compte</Text>
-
+<TouchableOpacity onPress={() => navigation.navigate('Login')}>
+  <Text style={styles.loginLink}>J'ai déjà un compte</Text>
+</TouchableOpacity>
       </Animated.View>
     </View>
   );

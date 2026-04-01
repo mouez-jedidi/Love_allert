@@ -1,16 +1,18 @@
-import { updateProfile } from '../services/api';
-import { useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ScrollView, SafeAreaView, Switch,
-} from 'react-native';
+import { uploadPhoto } from '../services/upload';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState, useEffect } from 'react';
+import { getMe, updateProfile } from '../services/api';
 import {
   REGIONS_TUNISIA, UNIVERSITIES_BY_REGION,
   STUDY_DOMAINS, WORK_DOMAINS, INTERESTS,
   LANGUAGES, RELIGIONS, EDUCATION_LEVELS, TRANSLATIONS,
 } from '../data/tunisiaData';
-
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  TextInput, ScrollView, SafeAreaView, Switch, Image,
+} from 'react-native';
 export default function ProfileScreen({ navigation }) {
+  const [profilePhoto, setProfilePhoto] = useState(null);
   const [lang, setLang] = useState('fr');
   const t = TRANSLATIONS[lang];
   const [step, setStep] = useState(1);
@@ -50,7 +52,59 @@ export default function ProfileScreen({ navigation }) {
       prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
     );
   };
+// Load existing profile data if editing
+useEffect(() => {
+  loadExistingProfile();
+}, []);
 
+const loadExistingProfile = async () => {
+  try {
+    // First try cached user from AsyncStorage
+    const userStr = await AsyncStorage.getItem('user');
+    const cached = userStr ? JSON.parse(userStr) : null;
+
+    // Then try fresh from API
+    let me = null;
+    try {
+      me = await getMe();
+    } catch {
+      me = cached;
+    }
+
+    if (!me) return;
+
+    setFirstName(me.firstName || '');
+    setLastName(me.lastName || '');
+    setAge(me.age?.toString() || '');
+    setHeight(me.height?.toString() || '');
+    setSex(me.sex || null);
+    setRegion(me.region || null);
+    setCivil(me.civilStatus || null);
+    setReligion(me.religion || null);
+    setSelectedLangs(me.languages || []);
+    setObjective(me.objective || null);
+    setStatus(
+      me.isStudent && me.isWorking ? 'both' :
+      me.isStudent ? 'student' :
+      me.isWorking ? 'working' : 'neither'
+    );
+    setStudyDomain(me.studyDomain || null);
+    setStudySpecialty(me.studySpecialty || null);
+    setUniversity(me.university || null);
+    setEducationLevel(me.educationLevel || null);
+    setWorkDomain(me.workDomain || null);
+    setWorkPost(me.workPost || null);
+    setSelectedInterests(me.interests || []);
+    setBio(me.bio || '');
+    setMinAge(me.minAge?.toString() || '18');
+    setMaxAge(me.maxAge?.toString() || '35');
+    setDistance(me.maxDistance?.toString() || '500');
+    if (me.photo) setProfilePhoto(me.photo);
+
+  } catch (err) {
+    console.log('Load profile error:', err.message);
+  }
+};
   const CIVIL_OPTIONS = ['Célibataire', 'En couple', 'Marié(e)', 'Divorcé(e)'];
   const OBJECTIVE_OPTIONS = ['Cherche une relation', 'Je veux me marier', 'Amitié'];
   const STATUS_OPTIONS = [
@@ -62,64 +116,79 @@ export default function ProfileScreen({ navigation }) {
   const DISTANCE_OPTIONS = ['100m', '300m', '500m', '1km', '2km', '5km'];
 
   // ─── STEP 1 ───
-  const renderStep1 = () => (
-    <View>
-      {/* Camera */}
-      <TouchableOpacity style={styles.cameraZone}>
-        <View style={styles.cameraCircle}>
+const renderStep1 = () => (
+  <View>
+    {/* Camera */}
+    <TouchableOpacity
+      style={styles.cameraZone}
+      onPress={() => navigation.navigate('Camera', {
+        onPhotoTaken: (photoPath) => setProfilePhoto(photoPath),
+      })}>
+      <View style={styles.cameraCircle}>
+        {profilePhoto ? (
+          <Image source={{ uri: profilePhoto }} style={styles.profilePhotoPreview} />
+        ) : (
           <Text style={styles.cameraIcon}>📷</Text>
-        </View>
-        <Text style={styles.cameraLabel}>{t.photo}</Text>
-        <Text style={styles.cameraHint}>{t.photoHint}</Text>
-      </TouchableOpacity>
+        )}
+      </View>
+      <Text style={styles.cameraLabel}>
+        {profilePhoto ? '✅ Photo prise !' : t.photo}
+      </Text>
+      <Text style={styles.cameraHint}>
+        {profilePhoto ? 'Appuyez pour changer' : t.photoHint}
+      </Text>
+    </TouchableOpacity>
 
-      {/* Name row */}
+    {/* Locked fields */}
+    <View style={styles.lockedSection}>
+      <Text style={styles.lockedTitle}>🔒 Informations non modifiables</Text>
       <View style={styles.row}>
         <View style={styles.fieldHalf}>
           <Text style={styles.label}>{t.firstName}</Text>
-          <TextInput style={styles.input} placeholder="Sarah"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            value={firstName} onChangeText={setFirstName} />
+          <View style={styles.lockedField}>
+            <Text style={styles.lockedFieldText}>{firstName}</Text>
+            <Text style={styles.lockIcon}>🔒</Text>
+          </View>
         </View>
         <View style={styles.fieldHalf}>
           <Text style={styles.label}>{t.lastName}</Text>
-          <TextInput style={styles.input} placeholder="Ben Ali"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            value={lastName} onChangeText={setLastName} />
+          <View style={styles.lockedField}>
+            <Text style={styles.lockedFieldText}>{lastName}</Text>
+            <Text style={styles.lockIcon}>🔒</Text>
+          </View>
         </View>
       </View>
 
-      {/* Age & Height */}
       <View style={styles.row}>
         <View style={styles.fieldHalf}>
           <Text style={styles.label}>{t.age}</Text>
-          <TextInput style={styles.input} placeholder="24"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            keyboardType="numeric" value={age} onChangeText={setAge} />
+          <View style={styles.lockedField}>
+            <Text style={styles.lockedFieldText}>{age} ans</Text>
+            <Text style={styles.lockIcon}>🔒</Text>
+          </View>
         </View>
         <View style={styles.fieldHalf}>
-          <Text style={styles.label}>{t.height}</Text>
-          <TextInput style={styles.input} placeholder="170"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            keyboardType="numeric" value={height} onChangeText={setHeight} />
+          <Text style={styles.label}>{t.sex}</Text>
+          <View style={styles.lockedField}>
+            <Text style={styles.lockedFieldText}>{sex}</Text>
+            <Text style={styles.lockIcon}>🔒</Text>
+          </View>
         </View>
       </View>
-
-      {/* Sex */}
-      <Text style={styles.label}>{t.sex}</Text>
-      <View style={styles.chipsRow}>
-        {[t.male, t.female].map(s => (
-          <TouchableOpacity key={s}
-            style={[styles.chip, sex === s && styles.chipActive]}
-            onPress={() => setSex(s)}>
-            <Text style={[styles.chipText, sex === s && styles.chipTextActive]}>
-              {s === t.male ? '👨 ' : '👩 '}{s}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
     </View>
-  );
+
+    {/* Height - modifiable */}
+    <Text style={styles.label}>{t.height}</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="170"
+      placeholderTextColor="rgba(255,255,255,0.2)"
+      keyboardType="numeric"
+      value={height}
+      onChangeText={setHeight}
+    />
+  </View>
+);
 
   // ─── STEP 2 ───
   const renderStep2 = () => (
@@ -363,32 +432,91 @@ export default function ProfileScreen({ navigation }) {
       </View>
     </View>
   );
-  const handleFinish = async () => {
+const handleFinish = async () => {
   try {
-    await updateProfile({
-      region,
-      civilStatus: civil,
-      religion,
-      languages: selectedLangs,
-      objective,
-      isStudent: status === 'student' || status === 'both',
-      isWorking: status === 'working' || status === 'both',
-      studyDomain,
-      studySpecialty,
-      university,
-      educationLevel,
-      workDomain,
-      workPost,
-      interests: selectedInterests,
-      bio,
-      minAge: parseInt(minAge),
-      maxAge: parseInt(maxAge),
-      maxDistance: parseInt(distance),
-    });
+    // Photo is mandatory
+    if (!profilePhoto) {
+      alert('📷 Veuillez prendre une photo avant de continuer');
+      setStep(1);
+      return;
+    }
+
+    let photoUrl = profilePhoto;
+
+    // Upload if new local photo
+    if (profilePhoto && !profilePhoto.startsWith('http')) {
+      console.log('📤 Uploading photo...');
+      photoUrl = await uploadPhoto(profilePhoto);
+    }
+
+    // Check if this is a pending registration (new user)
+    const pendingStr = await AsyncStorage.getItem('pendingRegistration');
+
+    if (pendingStr) {
+      // Create account now with all data including photo
+      const pending = JSON.parse(pendingStr);
+      const { register } = await import('../services/api');
+
+      const result = await register({
+        ...pending,
+        photo: photoUrl,
+        region,
+        civilStatus: civil,
+        religion,
+        languages: selectedLangs,
+        objective,
+        isStudent: status === 'student' || status === 'both',
+        isWorking: status === 'working' || status === 'both',
+        studyDomain,
+        studySpecialty,
+        university,
+        educationLevel,
+        workDomain,
+        workPost,
+        interests: selectedInterests,
+        bio,
+        minAge: parseInt(minAge) || 18,
+        maxAge: parseInt(maxAge) || 35,
+        maxDistance: parseInt(distance) || 500,
+        height: parseInt(height) || null,
+        isEmailVerified: true, // already verified before reaching here
+      });
+
+      // Clear pending data
+      await AsyncStorage.removeItem('pendingRegistration');
+
+    } else {
+      // Existing user updating profile
+      await updateProfile({
+        firstName,
+        lastName,
+        height: parseInt(height) || null,
+        photo: photoUrl,
+        region,
+        civilStatus: civil,
+        religion,
+        languages: selectedLangs,
+        objective,
+        isStudent: status === 'student' || status === 'both',
+        isWorking: status === 'working' || status === 'both',
+        studyDomain,
+        studySpecialty,
+        university,
+        educationLevel,
+        workDomain,
+        workPost,
+        interests: selectedInterests,
+        bio,
+        minAge: parseInt(minAge) || 18,
+        maxAge: parseInt(maxAge) || 35,
+        maxDistance: parseInt(distance) || 500,
+      });
+    }
+
     navigation.navigate('Home');
   } catch (err) {
-    console.log('Profile update error:', err.message);
-    navigation.navigate('Home');
+    console.log('Profile finish error:', err.message);
+    alert('Erreur: ' + err.message);
   }
 };
 
@@ -440,7 +568,13 @@ export default function ProfileScreen({ navigation }) {
           )}
           <TouchableOpacity
             style={[styles.btn, step === 1 && { flex: 1 }]}
-            onPress={() => step < 4 ? setStep(step + 1) : handleFinish()}>
+            onPress={() => {
+  if (step === 1 && !profilePhoto) {
+    alert('📷 Veuillez prendre une photo avant de continuer');
+    return;
+  }
+  step < 4 ? setStep(step + 1) : handleFinish();
+}}>
             <Text style={styles.btnText}>{step === 4 ? t.finish : t.next}</Text>
           </TouchableOpacity>
         </View>
@@ -542,6 +676,30 @@ const styles = StyleSheet.create({
     marginBottom: 10, marginTop: 8,
   },
   navRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  lockedSection: {
+  backgroundColor: 'rgba(255,255,255,0.03)',
+  borderRadius: 14, padding: 14,
+  borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  marginBottom: 16,
+},
+lockedTitle: {
+  color: 'rgba(255,255,255,0.3)',
+  fontSize: 11, letterSpacing: 1,
+  marginBottom: 12,
+},
+lockedField: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: 'rgba(255,255,255,0.03)',
+  borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  borderRadius: 12, padding: 12,
+},
+lockedFieldText: {
+  color: 'rgba(255,255,255,0.4)',
+  fontSize: 14,
+},
+lockIcon: { fontSize: 14 },
   btn: {
     flex: 2, backgroundColor: '#FF3366',
     padding: 16, borderRadius: 14, alignItems: 'center',
@@ -557,4 +715,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   btnBackText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '500' },
+  profilePhotoPreview: {
+  width: 90, height: 90, borderRadius: 45,
+},
 });

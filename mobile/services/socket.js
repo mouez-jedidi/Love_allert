@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SOCKET_URL = 'http://localhost:5000';
+import { SOCKET_URL } from '../config';
 
 let socket = null;
 

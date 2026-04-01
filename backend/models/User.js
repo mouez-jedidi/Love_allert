@@ -6,9 +6,12 @@ const UserSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
   age: { type: Number, required: true },
+  birthday: { type: Date },
+zodiac: { type: String },
   height: { type: Number },
   sex: { type: String, enum: ['Homme', 'Femme'], required: true },
   photo: { type: String }, // base64 or URL
+  gallery: [{ type: String }], // array of photo URLs
 
   // Auth
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -56,6 +59,11 @@ const UserSchema = new mongoose.Schema({
 
   // App data
   fcmToken: { type: String, default: null },
+  isEmailVerified: { type: Boolean, default: false },
+  phone: { type: String, default: null },
+isPhoneVerified: { type: Boolean, default: false },
+emailVerificationCode: { type: String, default: null },
+emailVerificationExpiry: { type: Date, default: null },
   isActive: { type: Boolean, default: true },
   lastSeen: { type: Date, default: Date.now },
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
