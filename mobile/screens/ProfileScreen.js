@@ -1,7 +1,8 @@
 import { uploadPhoto } from '../services/upload';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect } from 'react';
-import { getMe, updateProfile } from '../services/api';
+import { getMe, updateProfile, updateLocation  } from '../services/api';
+import * as Location from 'expo-location';
 import {
   REGIONS_TUNISIA, UNIVERSITIES_BY_REGION,
   STUDY_DOMAINS, WORK_DOMAINS, INTERESTS,
@@ -9,7 +10,7 @@ import {
 } from '../data/tunisiaData';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ScrollView, SafeAreaView, Switch, Image,
+  TextInput, ScrollView, SafeAreaView, Switch, Image, Alert, Platform,
 } from 'react-native';
 export default function ProfileScreen({ navigation }) {
   const [profilePhoto, setProfilePhoto] = useState(null);
@@ -45,7 +46,7 @@ export default function ProfileScreen({ navigation }) {
   const [bio, setBio] = useState('');
   const [minAge, setMinAge] = useState('18');
   const [maxAge, setMaxAge] = useState('35');
-  const [distance, setDistance] = useState('500');
+const [distance, setDistance] = useState('500');
 
   const toggleItem = (list, setList, item) => {
     setList(prev =>
@@ -59,16 +60,27 @@ useEffect(() => {
 
 const loadExistingProfile = async () => {
   try {
-    // First try cached user from AsyncStorage
-    const userStr = await AsyncStorage.getItem('user');
-    const cached = userStr ? JSON.parse(userStr) : null;
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      // New user — just load from pending registration
+      const pendingStr = await AsyncStorage.getItem('pendingRegistration');
+      if (pendingStr) {
+        const pending = JSON.parse(pendingStr);
+        setFirstName(pending.firstName || '');
+        setLastName(pending.lastName || '');
+        setAge(pending.age?.toString() || '');
+        setSex(pending.sex || null);
+      }
+      return;
+    }
 
-    // Then try fresh from API
+    // Existing user
     let me = null;
     try {
       me = await getMe();
     } catch {
-      me = cached;
+      const cached = await AsyncStorage.getItem('user');
+      me = cached ? JSON.parse(cached) : null;
     }
 
     if (!me) return;
@@ -105,6 +117,81 @@ const loadExistingProfile = async () => {
     console.log('Load profile error:', err.message);
   }
 };
+const detectLocation = async () => {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+
+    const { latitude, longitude } = location.coords;
+    console.log('📍 Coords:', latitude, longitude);
+
+    // Tunisia regions with approximate coordinates
+    const REGION_COORDS = [
+      { name: 'Tunis', lat: 36.8, lon: 10.18 },
+      { name: 'Ariana', lat: 36.86, lon: 10.19 },
+      { name: 'Ben Arous', lat: 36.75, lon: 10.22 },
+      { name: 'Manouba', lat: 36.81, lon: 10.1 },
+      { name: 'Nabeul', lat: 36.45, lon: 10.73 },
+      { name: 'Zaghouan', lat: 36.4, lon: 10.14 },
+      { name: 'Bizerte', lat: 37.27, lon: 9.87 },
+      { name: 'Béja', lat: 36.73, lon: 9.18 },
+      { name: 'Jendouba', lat: 36.5, lon: 8.78 },
+      { name: 'Kef', lat: 36.18, lon: 8.71 },
+      { name: 'Siliana', lat: 36.08, lon: 9.37 },
+      { name: 'Sousse', lat: 35.83, lon: 10.64 },
+      { name: 'Monastir', lat: 35.78, lon: 10.83 },
+      { name: 'Mahdia', lat: 35.5, lon: 11.06 },
+      { name: 'Sfax', lat: 34.74, lon: 10.76 },
+      { name: 'Kairouan', lat: 35.68, lon: 10.1 },
+      { name: 'Kasserine', lat: 35.17, lon: 8.83 },
+      { name: 'Sidi Bouzid', lat: 35.03, lon: 9.48 },
+      { name: 'Gabès', lat: 33.88, lon: 10.1 },
+      { name: 'Medenine', lat: 33.35, lon: 10.5 },
+      { name: 'Tataouine', lat: 32.93, lon: 10.45 },
+      { name: 'Gafsa', lat: 34.42, lon: 8.78 },
+      { name: 'Tozeur', lat: 33.92, lon: 8.13 },
+      { name: 'Kébili', lat: 33.7, lon: 8.97 },
+    ];
+
+    // Find closest region using distance formula
+    let closest = null;
+    let minDist = Infinity;
+
+    REGION_COORDS.forEach(r => {
+      const dist = Math.sqrt(
+        Math.pow(r.lat - latitude, 2) +
+        Math.pow(r.lon - longitude, 2)
+      );
+      if (dist < minDist) {
+        minDist = dist;
+        closest = r.name;
+      }
+    });
+
+    console.log('✅ Closest region:', closest, 'distance:', minDist);
+
+    if (closest) {
+      setRegion(closest);
+      // Show feedback
+      Platform.OS === 'web'
+        ? window.alert(`📍 Position détectée : ${closest}`)
+        : Alert.alert('📍 Position détectée', closest);
+    }
+
+    // Update backend if token exists
+    const token = await AsyncStorage.getItem('token');
+    if (token) {
+      await updateLocation(latitude, longitude);
+    }
+
+  } catch (err) {
+    console.log('❌ Location error:', err.message);
+  }
+};
   const CIVIL_OPTIONS = ['Célibataire', 'En couple', 'Marié(e)', 'Divorcé(e)'];
   const OBJECTIVE_OPTIONS = ['Cherche une relation', 'Je veux me marier', 'Amitié'];
   const STATUS_OPTIONS = [
@@ -113,7 +200,14 @@ const loadExistingProfile = async () => {
     { key: 'both', label: t.both },
     { key: 'neither', label: t.neither },
   ];
-  const DISTANCE_OPTIONS = ['100m', '300m', '500m', '1km', '2km', '5km'];
+  const DISTANCE_OPTIONS = [
+  { label: '100m', value: '100' },
+  { label: '300m', value: '300' },
+  { label: '500m', value: '500' },
+  { label: '1km', value: '1000' },
+  { label: '2km', value: '2000' },
+  { label: '5km', value: '5000' },
+];
 
   // ─── STEP 1 ───
 const renderStep1 = () => (
@@ -179,14 +273,17 @@ const renderStep1 = () => (
 
     {/* Height - modifiable */}
     <Text style={styles.label}>{t.height}</Text>
-    <TextInput
-      style={styles.input}
-      placeholder="170"
-      placeholderTextColor="rgba(255,255,255,0.2)"
-      keyboardType="numeric"
-      value={height}
-      onChangeText={setHeight}
-    />
+<TextInput
+  style={styles.input}
+  placeholder="170"
+  placeholderTextColor="rgba(255,255,255,0.2)"
+  keyboardType="numeric"
+  value={height}
+  onChangeText={(text) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setHeight(cleaned);
+  }}
+/>
   </View>
 );
 
@@ -198,7 +295,12 @@ const renderStep1 = () => (
       <View style={styles.fixedField}>
         <Text style={styles.fixedFieldText}>🇹🇳 Tunisie</Text>
       </View>
-
+      {/* Auto detect button */}
+      <TouchableOpacity
+        style={styles.detectBtn}
+        onPress={detectLocation}>
+        <Text style={styles.detectBtnText}>📡 Détecter ma position</Text>
+      </TouchableOpacity>
       {/* Region */}
       <Text style={styles.label}>{t.region}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -406,37 +508,53 @@ const renderStep1 = () => (
 
       {/* Age range */}
       <Text style={styles.label}>{t.ageRange}</Text>
-      <View style={styles.row}>
-        <View style={styles.fieldHalf}>
-          <TextInput style={styles.input} placeholder="Min: 18"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            keyboardType="numeric" value={minAge} onChangeText={setMinAge} />
-        </View>
-        <View style={styles.fieldHalf}>
-          <TextInput style={styles.input} placeholder="Max: 35"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            keyboardType="numeric" value={maxAge} onChangeText={setMaxAge} />
-        </View>
-      </View>
+<View style={styles.row}>
+  <View style={styles.fieldHalf}>
+    <TextInput style={styles.input} placeholder="Min: 18"
+      placeholderTextColor="rgba(255,255,255,0.2)"
+      keyboardType="numeric"
+      value={minAge}
+      onChangeText={(text) => setMinAge(text.replace(/[^0-9]/g, ''))}
+    />
+  </View>
+  <View style={styles.fieldHalf}>
+    <TextInput style={styles.input} placeholder="Max: 35"
+      placeholderTextColor="rgba(255,255,255,0.2)"
+      keyboardType="numeric"
+      value={maxAge}
+      onChangeText={(text) => setMaxAge(text.replace(/[^0-9]/g, ''))}
+    />
+  </View>
+</View>
 
       {/* Distance */}
       <Text style={styles.label}>{t.distance}</Text>
-      <View style={styles.chipsRow}>
-        {DISTANCE_OPTIONS.map(d => (
-          <TouchableOpacity key={d}
-            style={[styles.chip, distance === d && styles.chipActive]}
-            onPress={() => setDistance(d)}>
-            <Text style={[styles.chipText, distance === d && styles.chipTextActive]}>📍 {d}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+<View style={styles.chipsRow}>
+  {DISTANCE_OPTIONS.map(d => (
+    <TouchableOpacity key={d.value}
+      style={[styles.chip, distance === d.value && styles.chipActive]}
+      onPress={() => setDistance(d.value)}>
+      <Text style={[styles.chipText, distance === d.value && styles.chipTextActive]}>
+        📍 {d.label}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
     </View>
   );
 const handleFinish = async () => {
+    console.log('🔥 handleFinish called');
+  console.log('📸 photo:', profilePhoto);
+  console.log('📍 region:', region);
+  console.log('🎯 objective:', objective);
+  console.log('📊 minAge:', minAge, 'maxAge:', maxAge);
+  console.log('📏 distance:', distance);
+  console.log('🎭 interests:', selectedInterests.length);
   try {
-    // Photo is mandatory
     if (!profilePhoto) {
-      alert('📷 Veuillez prendre une photo avant de continuer');
+      Platform.OS === 'web'
+        ? window.alert('📷 Veuillez prendre une photo avant de continuer')
+        : Alert.alert('📷 Photo requise', 'Veuillez prendre une photo');
       setStep(1);
       return;
     }
@@ -447,76 +565,78 @@ const handleFinish = async () => {
     if (profilePhoto && !profilePhoto.startsWith('http')) {
       console.log('📤 Uploading photo...');
       photoUrl = await uploadPhoto(profilePhoto);
+      console.log('✅ Photo URL:', photoUrl);
     }
 
-    // Check if this is a pending registration (new user)
+    // Build complete profile data
+    const profileData = {
+      photo: photoUrl,
+      height: parseInt(height) || null,
+      region,
+      civilStatus: civil,
+      religion,
+      languages: selectedLangs,
+      objective,
+      isStudent: status === 'student' || status === 'both',
+      isWorking: status === 'working' || status === 'both',
+      studyDomain,
+      studySpecialty,
+      university,
+      educationLevel,
+      workDomain,
+      workPost,
+      interests: selectedInterests,
+      bio,
+      minAge: parseInt(minAge) || 18,
+      maxAge: parseInt(maxAge) || 35,
+      maxDistance: parseInt(distance) || 500,
+    };
+
+    console.log('📝 Profile data to save:', JSON.stringify(profileData));
+
+    // Check if new user (pending registration)
     const pendingStr = await AsyncStorage.getItem('pendingRegistration');
 
     if (pendingStr) {
-      // Create account now with all data including photo
       const pending = JSON.parse(pendingStr);
       const { register } = await import('../services/api');
 
       const result = await register({
-        ...pending,
-        photo: photoUrl,
-        region,
-        civilStatus: civil,
-        religion,
-        languages: selectedLangs,
-        objective,
-        isStudent: status === 'student' || status === 'both',
-        isWorking: status === 'working' || status === 'both',
-        studyDomain,
-        studySpecialty,
-        university,
-        educationLevel,
-        workDomain,
-        workPost,
-        interests: selectedInterests,
-        bio,
-        minAge: parseInt(minAge) || 18,
-        maxAge: parseInt(maxAge) || 35,
-        maxDistance: parseInt(distance) || 500,
-        height: parseInt(height) || null,
-        isEmailVerified: true, // already verified before reaching here
+        // Auth data
+        firstName: pending.firstName,
+        lastName: pending.lastName,
+        age: pending.age,
+        birthday: pending.birthday,
+        zodiac: pending.zodiac,
+        sex: pending.sex,
+        email: pending.email,
+        password: pending.password,
+        isEmailVerified: true,
+        // Profile data
+        ...profileData,
       });
 
-      // Clear pending data
+      console.log('✅ Account created:', result);
       await AsyncStorage.removeItem('pendingRegistration');
+      navigation.navigate('Home');
 
     } else {
-      // Existing user updating profile
+      // Existing user — update profile
       await updateProfile({
         firstName,
         lastName,
-        height: parseInt(height) || null,
-        photo: photoUrl,
-        region,
-        civilStatus: civil,
-        religion,
-        languages: selectedLangs,
-        objective,
-        isStudent: status === 'student' || status === 'both',
-        isWorking: status === 'working' || status === 'both',
-        studyDomain,
-        studySpecialty,
-        university,
-        educationLevel,
-        workDomain,
-        workPost,
-        interests: selectedInterests,
-        bio,
-        minAge: parseInt(minAge) || 18,
-        maxAge: parseInt(maxAge) || 35,
-        maxDistance: parseInt(distance) || 500,
+        ...profileData,
       });
+
+      console.log('✅ Profile updated');
+      navigation.navigate('MyProfile');
     }
 
-    navigation.navigate('Home');
   } catch (err) {
-    console.log('Profile finish error:', err.message);
-    alert('Erreur: ' + err.message);
+    console.log('❌ Profile finish error:', err.message);
+    Platform.OS === 'web'
+      ? window.alert('Erreur: ' + err.message)
+      : Alert.alert('Erreur', err.message);
   }
 };
 
@@ -568,12 +688,21 @@ const handleFinish = async () => {
           )}
           <TouchableOpacity
             style={[styles.btn, step === 1 && { flex: 1 }]}
-            onPress={() => {
+onPress={() => {
   if (step === 1 && !profilePhoto) {
-    alert('📷 Veuillez prendre une photo avant de continuer');
+    Platform.OS === 'web'
+      ? window.alert('📷 Veuillez prendre une photo avant de continuer')
+      : Alert.alert('📷 Photo requise', 'Veuillez prendre une photo avant de continuer');
     return;
   }
-  step < 4 ? setStep(step + 1) : handleFinish();
+  if (step === 1) {
+    detectLocation();
+  }
+  if (step < 4) {
+    setStep(step + 1);
+  } else {
+    handleFinish();
+  }
 }}>
             <Text style={styles.btnText}>{step === 4 ? t.finish : t.next}</Text>
           </TouchableOpacity>
@@ -717,5 +846,17 @@ lockIcon: { fontSize: 14 },
   btnBackText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '500' },
   profilePhotoPreview: {
   width: 90, height: 90, borderRadius: 45,
+},
+detectBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(255,51,102,0.1)',
+  borderWidth: 1, borderColor: 'rgba(255,51,102,0.2)',
+  borderRadius: 12, padding: 12,
+  marginBottom: 16, gap: 8,
+},
+detectBtnText: {
+  color: '#FF3366', fontSize: 14, fontWeight: '600',
 },
 });

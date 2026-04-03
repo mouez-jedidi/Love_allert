@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { API_URL } from './config';
+
+import LoadingScreen from './screens/LoadingScreen';
+import NoInternetScreen from './screens/NoInternetScreen';
 import SplashScreen from './screens/SplashScreen';
 import AuthScreen from './screens/AuthScreen';
 import LoginScreen from './screens/LoginScreen';
@@ -19,61 +24,94 @@ import TermsScreen from './screens/TermsScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import BlockReportScreen from './screens/BlockReportScreen';
 import GalleryScreen from './screens/GalleryScreen';
-import { API_URL } from './config';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [initialRoute, setInitialRoute] = useState('Onboarding');
   const [checking, setChecking] = useState(true);
+  const [isConnected, setIsConnected] = useState(true);
 
-  useEffect(() => { checkAuth(); }, []);
-const checkAuth = async () => {
-  try {
-    const onboardingDone = await AsyncStorage.getItem('onboardingDone');
-    const token = await AsyncStorage.getItem('token');
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected ?? true);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    if (token) {
-      // Validate token with backend
-      try {
-        const res = await fetch('${API_URL}/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-        if (!res.ok) {
-          // Token invalid or user deleted → clear storage
-          await AsyncStorage.removeItem('token');
-          await AsyncStorage.removeItem('user');
-          setInitialRoute(onboardingDone ? 'Splash' : 'Onboarding');
-          return;
-        }
+  const checkAuth = async () => {
+    try {
+      const onboardingDone = await AsyncStorage.getItem('onboardingDone');
+      const token = await AsyncStorage.getItem('token');
 
-        const me = await res.json();
+      if (!token) {
+        setInitialRoute(onboardingDone ? 'Splash' : 'Onboarding');
+        setChecking(false);
+        return;
+      }
 
-        if (!me.photo) {
-          setInitialRoute('Profile');
-        } else if (!me.isEmailVerified) {
-          await AsyncStorage.setItem('pendingEmail', me.email);
-          setInitialRoute('VerifyEmail');
-        } else {
-          setInitialRoute('Home');
-        }
-      } catch {
-        // Network error - still go home if token exists
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        await AsyncStorage.clear();
+        await AsyncStorage.setItem('onboardingDone', 'true');
+        setInitialRoute('Splash');
+        setChecking(false);
+        return;
+      }
+
+      const me = await res.json();
+
+      if (!me || !me._id) {
+        await AsyncStorage.clear();
+        await AsyncStorage.setItem('onboardingDone', 'true');
+        setInitialRoute('Splash');
+        setChecking(false);
+        return;
+      }
+
+      if (!me.photo) {
+        setInitialRoute('Profile');
+      } else if (!me.isEmailVerified) {
+        await AsyncStorage.setItem('pendingEmail', me.email);
+        setInitialRoute('VerifyEmail');
+      } else {
         setInitialRoute('Home');
       }
-    } else if (onboardingDone) {
-      setInitialRoute('Splash');
-    } else {
-      setInitialRoute('Onboarding');
-    }
-  } catch {
-    setInitialRoute('Onboarding');
-  } finally {
-    setChecking(false);
-  }
-};
 
-  if (checking) return null;
+    } catch (err) {
+      console.log('checkAuth error:', err.message);
+      const token = await AsyncStorage.getItem('token');
+      const onboardingDone = await AsyncStorage.getItem('onboardingDone');
+      if (token) {
+        setInitialRoute('Home');
+      } else {
+        setInitialRoute(onboardingDone ? 'Splash' : 'Onboarding');
+      }
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (checking) return <LoadingScreen />;
+
+  if (!isConnected) {
+    return (
+      <NoInternetScreen
+        onRetry={() =>
+          NetInfo.fetch().then(state =>
+            setIsConnected(state.isConnected ?? true)
+          )
+        }
+      />
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -90,11 +128,7 @@ const checkAuth = async () => {
         <Stack.Screen name="Chat" component={ChatScreen} />
         <Stack.Screen name="ChatList" component={ChatListScreen} />
         <Stack.Screen name="MyProfile" component={MyProfileScreen} />
-        <Stack.Screen 
-  name="VerifyEmail" 
-  component={VerifyEmailScreen}
-  initialParams={{ email: '' }}
-/>
+        <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
         <Stack.Screen name="VerifyPhone" component={VerifyPhoneScreen} />
         <Stack.Screen name="Camera" component={CameraScreen} />
         <Stack.Screen name="Terms" component={TermsScreen} />

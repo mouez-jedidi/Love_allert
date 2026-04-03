@@ -31,14 +31,32 @@ exports.register = async (req, res) => {
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     console.log('✅ Email is free, creating user...');
-    const user = await User.create({
-      email, password,
-      firstName, lastName,
-      age, sex, birthday, zodiac,
-      emailVerificationCode: code,
-      emailVerificationExpiry: expiry,
-      isEmailVerified: false,
-    });
+const user = await User.create({
+  email, password,
+  firstName, lastName,
+  age, sex, birthday, zodiac,
+  photo,
+  height: height || null,
+  region,
+  civilStatus,
+  religion,
+  languages: languages || [],
+  objective,
+  isStudent: isStudent || false,
+  isWorking: isWorking || false,
+  studyDomain,
+  studySpecialty,
+  university,
+  educationLevel,
+  workDomain,
+  workPost,
+  interests: interests || [],
+  bio,
+  minAge: minAge || 18,
+  maxAge: maxAge || 35,
+  maxDistance: maxDistance || 500,
+  isEmailVerified: isEmailVerified || false,
+});
 
     console.log('✅ User created:', user._id);
 

@@ -1,3 +1,4 @@
+
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, SafeAreaView, Switch, Image ,Platform,
@@ -7,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMe, logout } from '../services/api';
 import BottomNav from '../components/BottomNav';
 import { Alert } from 'react-native';
+import ProfileCompletion from '../components/ProfileCompletion';
 import api from '../services/api';
 export default function MyProfileScreen({ navigation }) {
   const [gpsActive, setGpsActive] = useState(true);
@@ -133,7 +135,7 @@ const confirmDeleteAccount = async () => {
   <Text style={styles.galleryBtnText}>📸 Ma galerie</Text>
 </TouchableOpacity>
         </View>
-
+<ProfileCompletion user={user} />
         {/* Stats */}
         <View style={styles.statsRow}>
           {STATS.map(stat => (

@@ -171,25 +171,30 @@ export default function ChatScreen({ navigation, route }) {
     }
   };
 
-  const renderMessage = ({ item }) => {
-    const isSent = item.sender === userId ||
-      item.sender?._id === userId;
-    return (
-      <View style={[styles.msgRow, isSent && styles.msgRowSent]}>
-        <View style={[styles.bubble,
-          isSent ? styles.bubbleSent : styles.bubbleRecv]}>
-          <Text style={[styles.bubbleText, isSent && styles.bubbleTextSent]}>
-            {item.text}
-          </Text>
-        </View>
+ const renderMessage = ({ item }) => {
+  const isSent = item.sender === userId || item.sender?._id === userId;
+  return (
+    <View style={[styles.msgRow, isSent && styles.msgRowSent]}>
+      <View style={[styles.bubble, isSent ? styles.bubbleSent : styles.bubbleRecv]}>
+        <Text style={[styles.bubbleText, isSent && styles.bubbleTextSent]}>
+          {item.text}
+        </Text>
+      </View>
+      <View style={styles.msgMeta}>
         <Text style={styles.msgTime}>
           {new Date(item.createdAt).toLocaleTimeString('fr-FR', {
             hour: '2-digit', minute: '2-digit',
           })}
         </Text>
+        {isSent && (
+          <Text style={styles.readReceipt}>
+            {item.read ? '✓✓' : '✓'}
+          </Text>
+        )}
       </View>
-    );
-  };
+    </View>
+  );
+};
 
   const renderHeader = () => (
     <View>
@@ -543,4 +548,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
   sendBtnText: { color: '#fff', fontSize: 16 },
+  msgMeta: {
+  flexDirection: 'row', alignItems: 'center',
+  gap: 4, paddingHorizontal: 4,
+},
+readReceipt: {
+  fontSize: 10,
+  color: 'rgba(255,255,255,0.4)',
+},
 });
