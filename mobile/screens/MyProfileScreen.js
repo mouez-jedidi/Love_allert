@@ -249,9 +249,10 @@ const confirmDeleteAccount = async () => {
           </View>
 {[
   { icon: '🔒', label: 'Confidentialité', onPress: () => navigation.navigate('Terms') },
-  { icon: '🚫', label: 'Utilisateurs bloqués', onPress: () => {} },
+  
   { icon: '⚠️', label: 'Signaler un problème', onPress: () => {} },
   { icon: '🗑️', label: 'Supprimer mon compte', onPress: handleDeleteAccount, danger: true },
+  { icon: '🚫', label: 'Utilisateurs bloqués', onPress: () => navigation.navigate('BlockedUsers') },
 ].map(item => (
   <TouchableOpacity key={item.label} style={styles.actionRow} onPress={item.onPress}>
     <Text style={styles.actionIcon}>{item.icon}</Text>

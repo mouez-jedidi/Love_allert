@@ -132,3 +132,25 @@ exports.getUserGallery = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// @route GET /api/users/blocked
+exports.getBlockedUsers = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('blockedUsers', '_id');
+    res.json(user.blockedUsers || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @route POST /api/users/unblock/:id
+exports.unblockUser = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user.id, {
+      $pull: { blockedUsers: req.params.id },
+    });
+    res.json({ message: 'Utilisateur débloqué' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

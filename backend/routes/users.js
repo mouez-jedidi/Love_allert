@@ -5,7 +5,7 @@ const {
   getNearbyUsers, blockUser,
   deleteAccount, reportUser,
   addToGallery, removeFromGallery,
-  getUserGallery,
+  getUserGallery, getBlockedUsers, unblockUser,
 } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 
@@ -18,5 +18,6 @@ router.post('/report', auth, reportUser);
 router.post('/gallery', auth, addToGallery);
 router.delete('/gallery/:photoUrl', auth, removeFromGallery);
 router.get('/:id/gallery', auth, getUserGallery);
-
+router.get('/blocked', auth, getBlockedUsers);
+router.post('/unblock/:id', auth, unblockUser);
 module.exports = router;

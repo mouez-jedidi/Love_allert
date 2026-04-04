@@ -18,7 +18,16 @@ const generateCode = () => {
 exports.register = async (req, res) => {
   try {
     console.log('📥 Register body:', req.body);
-    const { email, password, firstName, lastName, age, sex, birthday, zodiac } = req.body;
+    const {
+  email, password, firstName, lastName,
+  age, sex, birthday, zodiac,
+  photo, height, region, civilStatus, religion,
+  languages, objective, isStudent, isWorking,
+  studyDomain, studySpecialty, university,
+  educationLevel, workDomain, workPost,
+  interests, bio, minAge, maxAge, maxDistance,
+  isEmailVerified,
+} = req.body;
 
     console.log('🔍 Checking if email exists...');
     const exists = await User.findOne({ email });
