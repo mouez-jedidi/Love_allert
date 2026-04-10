@@ -153,4 +153,47 @@ exports.unblockUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+  
+};
+// @route GET /api/users/:id
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -email');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const { filterUserByPrivacy } = require('../middleware/privacy');
+    const filtered = await filterUserByPrivacy(user, req.user.id);
+    res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// @route GET /api/users/:id
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -email -emailVerificationCode -emailVerificationExpiry');
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    
+    const { filterUserByPrivacy } = require('../middleware/privacy');
+    const filtered = await filterUserByPrivacy(user, req.user.id);
+    res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// @route PUT /api/users/update-fcm-token
+exports.updateFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) {
+      return res.status(400).json({ message: 'Token requis' });
+    }
+    
+    await User.findByIdAndUpdate(req.user.id, { fcmToken });
+    console.log(`✅ FCM token mis à jour pour ${req.user.id}`);
+    res.json({ message: 'Token FCM mis à jour' });
+  } catch (err) {
+    console.error('❌ Erreur update FCM token:', err.message);
+    res.status(500).json({ message: err.message });
+  }
 };

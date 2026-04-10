@@ -4,14 +4,20 @@ const Match = require('../models/Match');
 // @route GET /api/messages/:matchId
 exports.getMessages = async (req, res) => {
   try {
-    const messages = await Message.find({ matchId: req.params.matchId })
-      .sort({ createdAt: 1 });
+    const matchId = req.params.matchId;
+    
+    // Mark all messages from other user as read
+    await Message.updateMany(
+      { matchId, sender: { $ne: req.user.id }, read: false },
+      { $set: { read: true } }
+    );
+    
+    const messages = await Message.find({ matchId }).sort({ createdAt: 1 });
     res.json(messages);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 // @route POST /api/messages/:matchId
 exports.sendMessage = async (req, res) => {
   try {

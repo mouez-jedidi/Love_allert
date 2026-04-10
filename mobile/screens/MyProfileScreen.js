@@ -1,7 +1,6 @@
-
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, SafeAreaView, Switch, Image ,Platform,
+  ScrollView, SafeAreaView, Switch, Image, Platform,
 } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +9,7 @@ import BottomNav from '../components/BottomNav';
 import { Alert } from 'react-native';
 import ProfileCompletion from '../components/ProfileCompletion';
 import api from '../services/api';
+
 export default function MyProfileScreen({ navigation }) {
   const [gpsActive, setGpsActive] = useState(true);
   const [notifActive, setNotifActive] = useState(true);
@@ -26,7 +26,6 @@ export default function MyProfileScreen({ navigation }) {
       setUser(me);
     } catch (err) {
       console.log('Profile load error:', err.message);
-      // Fallback to cached user
       const cached = await AsyncStorage.getItem('user');
       if (cached) setUser(JSON.parse(cached));
     } finally {
@@ -38,33 +37,35 @@ export default function MyProfileScreen({ navigation }) {
     await logout();
     navigation.navigate('Splash');
   };
-const handleDeleteAccount = async () => {
-  if (Platform.OS === 'web') {
-    const confirmed = window.confirm(
-      'Êtes-vous sûr ? Cette action est irréversible. Toutes vos données seront supprimées définitivement.'
-    );
-    if (confirmed) await confirmDeleteAccount();
-  } else {
-    Alert.alert(
-      '🗑️ Supprimer le compte',
-      'Êtes-vous sûr ? Cette action est irréversible. Toutes vos données seront supprimées définitivement.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: confirmDeleteAccount },
-      ]
-    );
-  }
-};
 
-const confirmDeleteAccount = async () => {
-  try {
-    await api.delete('/users/account');
-    await logout();
-    navigation.navigate('Splash');
-  } catch (err) {
-    Alert.alert('Erreur', 'Impossible de supprimer le compte');
-  }
-};
+  const handleDeleteAccount = async () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'Êtes-vous sûr ? Cette action est irréversible. Toutes vos données seront supprimées définitivement.'
+      );
+      if (confirmed) await confirmDeleteAccount();
+    } else {
+      Alert.alert(
+        'Supprimer le compte',
+        'Êtes-vous sûr ? Cette action est irréversible. Toutes vos données seront supprimées définitivement.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Supprimer', style: 'destructive', onPress: confirmDeleteAccount },
+        ]
+      );
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await api.delete('/users/account');
+      await logout();
+      navigation.navigate('Splash');
+    } catch (err) {
+      Alert.alert('Erreur', 'Impossible de supprimer le compte');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -76,10 +77,17 @@ const confirmDeleteAccount = async () => {
   }
 
   const STATS = [
-    { label: 'Matchs reçus', value: '0', icon: '💘' },
-    { label: 'Chats actifs', value: '0', icon: '💬' },
-    { label: 'Profils débloqués', value: '0', icon: '🔓' },
+    { label: 'Matchs reçus', value: '0' },
+    { label: 'Chats actifs', value: '0' },
+    { label: 'Profils débloqués', value: '0' },
   ];
+
+  const getAvatarInitial = () => {
+    if (user?.firstName) return user.firstName.charAt(0).toUpperCase();
+    if (user?.sex === 'Femme') return 'F';
+    if (user?.sex === 'Homme') return 'H';
+    return '?';
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,28 +103,21 @@ const confirmDeleteAccount = async () => {
           <TouchableOpacity
             style={styles.editBtn}
             onPress={() => navigation.navigate('Profile')}>
-            <Text style={styles.editBtnText}>✏️ Modifier</Text>
+            <Text style={styles.editBtnText}>Modifier</Text>
           </TouchableOpacity>
         </View>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
-<View style={styles.avatar}>
-  {user?.photo ? (
-    <Image
-      source={{ uri: user.photo }}
-      style={styles.avatarImage}
-    />
-  ) : (
-    <Text style={styles.avatarText}>
-      {user?.sex === 'Femme' ? '👩' : '👨'}
-    </Text>
-  )}
-</View>
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓</Text>
+            <View style={styles.avatar}>
+              {user?.photo ? (
+                <Image source={{ uri: user.photo }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{getAvatarInitial()}</Text>
+              )}
             </View>
+            <View style={styles.verifiedBadge} />
           </View>
           <Text style={styles.profileName}>
             {user?.firstName} {user?.lastName}
@@ -126,21 +127,22 @@ const confirmDeleteAccount = async () => {
           </Text>
           {user?.objective && (
             <View style={styles.objectiveChip}>
-              <Text style={styles.objectiveText}>💍 {user.objective}</Text>
+              <Text style={styles.objectiveText}>{user.objective}</Text>
             </View>
           )}
           <TouchableOpacity
-  style={styles.galleryBtn}
-  onPress={() => navigation.navigate('Gallery', { isOwnProfile: true })}>
-  <Text style={styles.galleryBtnText}>📸 Ma galerie</Text>
-</TouchableOpacity>
+            style={styles.galleryBtn}
+            onPress={() => navigation.navigate('Gallery', { isOwnProfile: true })}>
+            <Text style={styles.galleryBtnText}>Ma galerie</Text>
+          </TouchableOpacity>
         </View>
-<ProfileCompletion user={user} />
-        {/* Stats */}
+
+        <ProfileCompletion user={user} />
+
+        {/* Stats - no icons */}
         <View style={styles.statsRow}>
           {STATS.map(stat => (
             <View key={stat.label} style={styles.statCard}>
-              <Text style={styles.statIcon}>{stat.icon}</Text>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
@@ -153,23 +155,23 @@ const confirmDeleteAccount = async () => {
             <Text style={styles.sectionTitle}>INFORMATIONS</Text>
             {user?.studyDomain && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>🎓</Text>
+                <Text style={styles.infoLabel}>Études</Text>
                 <Text style={styles.infoText}>
-                  {user.studyDomain} — {user.studySpecialty}
+                  {user.studyDomain} — {user.studySpecialty || ''}
                 </Text>
               </View>
             )}
             {user?.workDomain && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>💼</Text>
+                <Text style={styles.infoLabel}>Travail</Text>
                 <Text style={styles.infoText}>
-                  {user.workPost} · {user.workDomain}
+                  {user.workPost || ''} · {user.workDomain}
                 </Text>
               </View>
             )}
             {user?.university && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>🏛️</Text>
+                <Text style={styles.infoLabel}>Université</Text>
                 <Text style={styles.infoText}>{user.university}</Text>
               </View>
             )}
@@ -195,7 +197,6 @@ const confirmDeleteAccount = async () => {
           <Text style={styles.sectionTitle}>PARAMÈTRES</Text>
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>📡</Text>
               <View>
                 <Text style={styles.settingLabel}>GPS actif</Text>
                 <Text style={styles.settingHint}>Détection des personnes proches</Text>
@@ -204,13 +205,12 @@ const confirmDeleteAccount = async () => {
             <Switch
               value={gpsActive}
               onValueChange={setGpsActive}
-              trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#FF3366' }}
+              trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#D9A066' }}
               thumbColor={gpsActive ? '#fff' : 'rgba(255,255,255,0.4)'}
             />
           </View>
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>🔔</Text>
               <View>
                 <Text style={styles.settingLabel}>Notifications</Text>
                 <Text style={styles.settingHint}>Alertes de match</Text>
@@ -219,7 +219,7 @@ const confirmDeleteAccount = async () => {
             <Switch
               value={notifActive}
               onValueChange={setNotifActive}
-              trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#FF3366' }}
+              trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#D9A066' }}
               thumbColor={notifActive ? '#fff' : 'rgba(255,255,255,0.4)'}
             />
           </View>
@@ -229,14 +229,14 @@ const confirmDeleteAccount = async () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>PRÉFÉRENCES DE MATCHING</Text>
           <View style={styles.prefRow}>
-            <Text style={styles.prefLabel}>🎯 Tranche d'âge</Text>
+            <Text style={styles.prefLabel}>Tranche d'âge</Text>
             <Text style={styles.prefValue}>
               {user?.minAge || 18} — {user?.maxAge || 35} ans
             </Text>
           </View>
           <View style={styles.prefRow}>
-            <Text style={styles.prefLabel}>📏 Distance max</Text>
-            <Text style={styles.prefValue}>{user?.maxDistance || 500}m</Text>
+            <Text style={styles.prefLabel}>Distance max</Text>
+            <Text style={styles.prefValue}>{user?.maxDistance || 500} m</Text>
           </View>
         </View>
 
@@ -244,24 +244,22 @@ const confirmDeleteAccount = async () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>COMPTE</Text>
           <View style={styles.emailRow}>
-            <Text style={styles.settingIcon}>📧</Text>
             <Text style={styles.emailText}>{user?.email}</Text>
           </View>
-{[
-  { icon: '🔒', label: 'Confidentialité', onPress: () => navigation.navigate('Terms') },
-  
-  { icon: '⚠️', label: 'Signaler un problème', onPress: () => {} },
-  { icon: '🗑️', label: 'Supprimer mon compte', onPress: handleDeleteAccount, danger: true },
-  { icon: '🚫', label: 'Utilisateurs bloqués', onPress: () => navigation.navigate('BlockedUsers') },
-].map(item => (
-  <TouchableOpacity key={item.label} style={styles.actionRow} onPress={item.onPress}>
-    <Text style={styles.actionIcon}>{item.icon}</Text>
-    <Text style={[styles.actionLabel, item.danger && styles.actionLabelDanger]}>
-      {item.label}
-    </Text>
-    <Text style={styles.actionArrow}>›</Text>
-  </TouchableOpacity>
-))}
+          {[
+            { label: 'Confidentialité', onPress: () => navigation.navigate('Terms') },
+            { label: 'À propos', onPress: () => navigation.navigate('About') },
+            { label: 'Signaler un problème', onPress: () => {} },
+            { label: 'Supprimer mon compte', onPress: handleDeleteAccount, danger: true },
+            { label: 'Utilisateurs bloqués', onPress: () => navigation.navigate('BlockedUsers') },
+          ].map(item => (
+            <TouchableOpacity key={item.label} style={styles.actionRow} onPress={item.onPress}>
+              <Text style={[styles.actionLabel, item.danger && styles.actionLabelDanger]}>
+                {item.label}
+              </Text>
+              <Text style={styles.actionArrow}>›</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Logout */}
@@ -277,7 +275,7 @@ const confirmDeleteAccount = async () => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0a12' },
+  container: { flex: 1, backgroundColor: '#050505' },
   scroll: { padding: 24, paddingBottom: 100 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
@@ -287,92 +285,102 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 24,
   },
   title: { fontSize: 26, fontWeight: '800', color: '#fff' },
-  titleAccent: { color: '#FF3366' },
+  titleAccent: { color: '#D9A066' },
   editBtn: {
     paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,51,102,0.1)',
-    borderWidth: 1, borderColor: 'rgba(255,51,102,0.2)',
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
-  editBtnText: { color: '#FF3366', fontSize: 12, fontWeight: '600' },
+  editBtnText: { color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 1 },
 
   profileCard: {
     alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    borderRadius: 20, padding: 24, marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16, padding: 24, marginBottom: 20,
   },
   avatarWrap: { position: 'relative', marginBottom: 4 },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#FF3366',
+    backgroundColor: '#D9A066',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#FF3366',
+    shadowColor: '#D9A066',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5, shadowRadius: 20, elevation: 10,
+    shadowOpacity: 0.4, shadowRadius: 20, elevation: 10,
   },
-  avatarText: { fontSize: 36 },
+  avatarText: { fontSize: 32, color: '#050505', fontWeight: '300' },
+  avatarImage: { width: 80, height: 80, borderRadius: 40 },
   verifiedBadge: {
     position: 'absolute', bottom: 0, right: 0,
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#22c55e',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#0d0a12',
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: '#D9A066',
+    borderWidth: 1.5, borderColor: '#050505',
   },
-  verifiedText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  profileName: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  profileName: { color: '#fff', fontSize: 20, fontWeight: '700', letterSpacing: 0.5 },
   profileAge: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
   objectiveChip: {
     paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,51,102,0.1)',
-    borderWidth: 1, borderColor: 'rgba(255,51,102,0.2)',
+    backgroundColor: 'rgba(217,160,102,0.1)',
+    borderWidth: 1, borderColor: 'rgba(217,160,102,0.3)',
   },
-  objectiveText: { color: '#FF3366', fontSize: 12, fontWeight: '600' },
+  objectiveText: { color: '#D9A066', fontSize: 12, fontWeight: '600' },
+  galleryBtn: {
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 20, marginTop: 4,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  galleryBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, letterSpacing: 0.5 },
 
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   statCard: {
     flex: 1, alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 16, padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12, padding: 12,
   },
-  statIcon: { fontSize: 20 },
-  statValue: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  statValue: { color: '#fff', fontSize: 18, fontWeight: '700' },
   statLabel: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.4)',
     fontSize: 9, textAlign: 'center', letterSpacing: 0.5,
   },
 
   section: {
     marginBottom: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 18, padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 14, padding: 16,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   sectionTitle: {
-    color: 'rgba(255,255,255,0.25)',
+    color: 'rgba(255,255,255,0.3)',
     fontSize: 10, letterSpacing: 2,
     fontWeight: '600', marginBottom: 16,
   },
 
   infoRow: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 10, paddingVertical: 8,
+    gap: 12, paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  infoIcon: { fontSize: 18 },
-  infoText: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
+  infoLabel: {
+    color: '#D9A066',
+    fontSize: 11,
+    fontWeight: '600',
+    width: 70,
+  },
+  infoText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, flex: 1 },
 
   interestsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   interestChip: {
     paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,51,102,0.1)',
-    borderWidth: 1, borderColor: 'rgba(255,51,102,0.2)',
+    backgroundColor: 'rgba(217,160,102,0.1)',
+    borderWidth: 1, borderColor: 'rgba(217,160,102,0.2)',
   },
-  interestText: { color: '#FF3366', fontSize: 12 },
+  interestText: { color: '#D9A066', fontSize: 12 },
 
   settingRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -380,10 +388,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  settingLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  settingIcon: { fontSize: 20 },
+  settingLeft: { flex: 1 },
   settingLabel: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  settingHint: { color: 'rgba(255,255,255,0.3)', fontSize: 11 },
+  settingHint: { color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 },
 
   prefRow: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -392,42 +399,32 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   prefLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
-  prefValue: { color: '#FF3366', fontSize: 13, fontWeight: '600' },
+  prefValue: { color: '#D9A066', fontSize: 13, fontWeight: '600' },
 
   emailRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, paddingVertical: 10,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  emailText: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
+  emailText: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
 
   actionRow: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 12, paddingVertical: 12,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  actionIcon: { fontSize: 18 },
-  actionLabel: { flex: 1, color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  actionArrow: { color: 'rgba(255,255,255,0.2)', fontSize: 18 },
-avatarImage: {
-  width: 80, height: 80, borderRadius: 40,
-},
+  actionLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  actionArrow: { color: 'rgba(255,255,255,0.2)', fontSize: 16 },
+  actionLabelDanger: { color: 'rgba(217,160,102,0.8)' },
+
   logoutBtn: {
-    padding: 16, borderRadius: 14,
+    padding: 16, borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'transparent',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     marginBottom: 20,
   },
-  logoutText: { color: 'rgba(255,100,100,0.7)', fontSize: 14, fontWeight: '600' },
-  actionLabelDanger: { color: 'rgba(255,100,100,0.8)' },
-  galleryBtn: {
-  paddingHorizontal: 16, paddingVertical: 8,
-  borderRadius: 20, marginTop: 4,
-  backgroundColor: 'rgba(255,255,255,0.06)',
-  borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-},
-galleryBtnText: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
+  logoutText: { color: 'rgba(217,160,102,0.7)', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
 });

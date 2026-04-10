@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0d0a12"
     },
@@ -16,11 +15,12 @@
       "bundleIdentifier": "com.lovealert.app"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d0a12"
-      },
       "package": "com.lovealert.app"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5e62d22d-7e18-40a7-9fc6-a7f593cc8a94"
+      }
     }
   }
 }

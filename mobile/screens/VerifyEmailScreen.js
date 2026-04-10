@@ -36,13 +36,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
       setError('');
 
       if (isPending) {
-        // Verify code without account
         await checkPreVerificationCode(email, code);
         setSuccess(true);
-        // Go to profile to take photo
         setTimeout(() => navigation.navigate('Profile', { isPending: true }), 1500);
       } else {
-        // Verify existing account email
         await verifyEmail(code);
         setSuccess(true);
         const userStr = await AsyncStorage.getItem('user');
@@ -79,8 +76,20 @@ export default function VerifyEmailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.icon}>📧</Text>
-        <Text style={styles.title}>Vérifiez votre email</Text>
+        {/* Back button (optional, but consistent with AuthScreen) */}
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>Retour</Text>
+        </TouchableOpacity>
+
+        {/* Brand header */}
+        <View style={styles.logoWrap}>
+          <Text style={styles.brandTitle}>LOVE</Text>
+          <Text style={styles.brandSubtitle}>ALERT</Text>
+          <Text style={styles.logoSub}>VÉRIFICATION EMAIL</Text>
+        </View>
+
         <Text style={styles.sub}>
           Nous avons envoyé un code à{'\n'}
           <Text style={styles.email}>{email}</Text>
@@ -88,13 +97,13 @@ export default function VerifyEmailScreen({ navigation, route }) {
 
         {success && (
           <View style={styles.successBox}>
-            <Text style={styles.successText}>✅ Email vérifié !</Text>
+            <Text style={styles.successText}>Email vérifié avec succès</Text>
           </View>
         )}
 
         {error ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
 
@@ -114,7 +123,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
           onPress={handleVerify}
           disabled={loading}>
           <Text style={styles.btnText}>
-            {loading ? 'Vérification...' : 'Vérifier →'}
+            {loading ? 'Vérification...' : 'VÉRIFIER'}
           </Text>
         </TouchableOpacity>
 
@@ -127,49 +136,136 @@ export default function VerifyEmailScreen({ navigation, route }) {
             <Text style={styles.resendTimer}>Renvoyer dans {countdown}s</Text>
           )}
         </View>
-
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0a12' },
+  container: { flex: 1, backgroundColor: '#050505' },
   content: {
-    flex: 1, alignItems: 'center',
-    justifyContent: 'center', padding: 32,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 40,
   },
-  icon: { fontSize: 64, marginBottom: 16 },
-  title: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 12, textAlign: 'center' },
-  sub: { color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
-  email: { color: '#FF3366', fontWeight: '700' },
+  backBtn: {
+    position: 'absolute',
+    top: 16,
+    left: 24,
+    zIndex: 10,
+  },
+  backText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+    letterSpacing: 1,
+  },
+  logoWrap: {
+    alignItems: 'center',
+    marginBottom: 40,
+    marginTop: 20,
+  },
+  brandTitle: {
+    fontSize: 48,
+    fontWeight: '200',
+    color: '#FFFFFF',
+    letterSpacing: 15,
+    textAlign: 'center',
+  },
+  brandSubtitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#D9A066',
+    letterSpacing: 8,
+    marginTop: -5,
+  },
+  logoSub: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 10,
+    letterSpacing: 2,
+    marginTop: 20,
+    fontWeight: '600',
+  },
+  sub: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  email: {
+    color: '#D9A066',
+    fontWeight: '600',
+  },
   successBox: {
-    backgroundColor: 'rgba(34,197,94,0.1)', borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.2)', borderRadius: 12,
-    padding: 12, marginBottom: 16, width: '100%',
+    backgroundColor: 'rgba(217,160,102,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,160,102,0.3)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    width: '100%',
   },
-  successText: { color: '#22c55e', fontSize: 14, textAlign: 'center' },
+  successText: {
+    color: '#D9A066',
+    fontSize: 13,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
   errorBox: {
-    backgroundColor: 'rgba(255,50,50,0.1)', borderWidth: 1,
-    borderColor: 'rgba(255,50,50,0.2)', borderRadius: 12,
-    padding: 12, marginBottom: 16, width: '100%',
+    backgroundColor: 'rgba(255,50,50,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,50,50,0.2)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    width: '100%',
   },
-  errorText: { color: '#ff6b6b', fontSize: 13, textAlign: 'center' },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 13,
+    textAlign: 'center',
+  },
   codeInput: {
-    width: '100%', backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 2, borderColor: '#FF3366', borderRadius: 16,
-    padding: 20, color: '#fff', fontSize: 32,
-    fontWeight: '800', letterSpacing: 10, marginBottom: 20,
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: '#D9A066',
+    borderRadius: 8,
+    padding: 16,
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '600',
+    letterSpacing: 8,
+    textAlign: 'center',
+    marginBottom: 24,
   },
   btn: {
-    width: '100%', backgroundColor: '#FF3366',
-    padding: 16, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#FF3366', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4, shadowRadius: 15, elevation: 10,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  resendRow: { marginTop: 20 },
-  resendLink: { color: '#FF3366', fontSize: 14, fontWeight: '600' },
-  resendTimer: { color: 'rgba(255,255,255,0.3)', fontSize: 14 },
+  btnDisabled: { opacity: 0.5 },
+  btnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  resendRow: { marginTop: 24 },
+  resendLink: {
+    color: '#D9A066',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  resendTimer: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 12,
+  },
 });

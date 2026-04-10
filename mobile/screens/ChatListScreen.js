@@ -7,11 +7,11 @@ import { getMyMatches } from '../services/api';
 import BottomNav from '../components/BottomNav';
 
 const getRevealLabel = (messageCount, trustPercent) => {
-  if (trustPercent >= 90) return '🔓 Profil débloqué';
-  if (messageCount >= 50) return '📸 Photo débloquée';
-  if (messageCount >= 30) return '📍 Âge & Région révélés';
-  if (messageCount >= 15) return '👤 Prénom révélé';
-  return '🔒 Identité inconnue';
+  if (trustPercent >= 90) return 'Profil débloqué';
+  if (messageCount >= 50) return 'Photo débloquée';
+  if (messageCount >= 30) return 'Âge et région révélés';
+  if (messageCount >= 15) return 'Prénom révélé';
+  return 'Identité inconnue';
 };
 
 export default function ChatListScreen({ navigation }) {
@@ -38,6 +38,9 @@ export default function ChatListScreen({ navigation }) {
       ((item.user1TrustPoints + item.user2TrustPoints) / 20) * 100
     );
 
+    // Determine avatar placeholder
+    const avatarInitial = '?';
+
     return (
       <TouchableOpacity
         style={styles.chatCard}
@@ -48,7 +51,7 @@ export default function ChatListScreen({ navigation }) {
             styles.avatar,
             trustPercent >= 90 && styles.avatarUnlocked,
           ]}>
-            <Text style={styles.avatarText}>?</Text>
+            <Text style={styles.avatarText}>{avatarInitial}</Text>
           </View>
         </View>
 
@@ -69,7 +72,7 @@ export default function ChatListScreen({ navigation }) {
 
           <View style={styles.barsRow}>
             <View style={styles.miniBar}>
-              <Text style={styles.miniBarText}>💬 {item.messageCount} msgs</Text>
+              <Text style={styles.miniBarText}>Messages {item.messageCount}</Text>
               <View style={styles.miniBarTrack}>
                 <View style={[
                   styles.miniBarFill,
@@ -78,13 +81,13 @@ export default function ChatListScreen({ navigation }) {
               </View>
             </View>
             <View style={styles.miniBar}>
-              <Text style={styles.miniBarText}>❤️ {trustPercent}%</Text>
+              <Text style={styles.miniBarText}>Confiance {trustPercent}%</Text>
               <View style={styles.miniBarTrack}>
                 <View style={[
                   styles.miniBarFill,
                   {
                     width: `${trustPercent}%`,
-                    backgroundColor: trustPercent >= 90 ? '#22c55e' : '#FF3366',
+                    backgroundColor: trustPercent >= 90 ? '#88c9a0' : '#D9A066',
                   }
                 ]} />
               </View>
@@ -110,15 +113,13 @@ export default function ChatListScreen({ navigation }) {
 
       {loading ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>⏳</Text>
           <Text style={styles.emptyTitle}>Chargement...</Text>
         </View>
       ) : chats.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>💘</Text>
           <Text style={styles.emptyTitle}>Aucun chat pour l'instant</Text>
           <Text style={styles.emptySub}>
-            L'app vous notifiera quand une personne{'\n'}
+            L'application vous notifiera quand une personne{'\n'}
             compatible sera proche de vous
           </Text>
         </View>
@@ -140,7 +141,7 @@ export default function ChatListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0a12' },
+  container: { flex: 1, backgroundColor: '#050505' },
   header: {
     flexDirection: 'row', alignItems: 'center',
     gap: 10, paddingHorizontal: 24,
@@ -149,55 +150,54 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   title: { fontSize: 26, fontWeight: '800', color: '#fff' },
-  titleAccent: { color: '#FF3366' },
+  titleAccent: { color: '#D9A066' },
   badge: {
-    backgroundColor: '#FF3366',
+    backgroundColor: '#D9A066',
     width: 24, height: 24, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  badgeText: { color: '#050505', fontSize: 12, fontWeight: '800' },
   list: { padding: 16, paddingBottom: 90, gap: 12 },
   chatCard: {
     flexDirection: 'row', gap: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    borderRadius: 18, padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14, padding: 14,
   },
   avatarWrap: { position: 'relative' },
   avatar: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: 'rgba(255,51,102,0.1)',
-    borderWidth: 2, borderColor: 'rgba(255,51,102,0.2)',
+    backgroundColor: 'rgba(217,160,102,0.1)',
+    borderWidth: 1.5, borderColor: 'rgba(217,160,102,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
   avatarUnlocked: {
-    backgroundColor: 'rgba(255,51,102,0.2)',
-    borderColor: '#FF3366',
+    backgroundColor: 'rgba(217,160,102,0.2)',
+    borderColor: '#D9A066',
   },
-  avatarText: { fontSize: 22, color: '#FF3366', fontWeight: '800' },
+  avatarText: { fontSize: 20, color: '#D9A066', fontWeight: '400' },
   chatInfo: { flex: 1, gap: 3 },
   chatTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between', alignItems: 'center',
   },
-  chatName: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  chatTime: { color: 'rgba(255,255,255,0.25)', fontSize: 11 },
-  chatReveal: { color: '#FF3366', fontSize: 11, fontWeight: '600' },
+  chatName: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  chatTime: { color: 'rgba(255,255,255,0.3)', fontSize: 10, letterSpacing: 0.5 },
+  chatReveal: { color: '#D9A066', fontSize: 11, fontWeight: '500', letterSpacing: 0.5 },
   barsRow: { gap: 5, marginTop: 4 },
   miniBar: { gap: 3 },
-  miniBarText: { color: 'rgba(255,255,255,0.25)', fontSize: 9 },
+  miniBarText: { color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: 0.5 },
   miniBarTrack: {
-    height: 3, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2,
+    height: 2, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 1,
   },
-  miniBarFill: { height: '100%', backgroundColor: '#FF3366', borderRadius: 2 },
+  miniBarFill: { height: '100%', borderRadius: 1 },
   emptyState: {
     flex: 1, alignItems: 'center',
     justifyContent: 'center', gap: 12, paddingHorizontal: 40,
   },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  emptyTitle: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center', letterSpacing: 0.5 },
   emptySub: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 13, textAlign: 'center', lineHeight: 20,
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12, textAlign: 'center', lineHeight: 18,
   },
 });

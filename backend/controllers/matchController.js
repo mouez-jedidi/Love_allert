@@ -122,7 +122,20 @@ exports.respondToMatch = async (req, res) => {
     }
 
     await match.save();
+// After match.save(), before res.json(...)
+// After match.save(), before res.json(...)
+const io = req.app.get('io');
+const socketModule = require('../config/socket');
 
+if (match.status === 'active') {
+  // Notify both users that match is now active
+  if (socketModule.emitToUser) {
+    socketModule.emitToUser(io, match.user1.toString(), 'matchAccepted', { matchId: match._id });
+    socketModule.emitToUser(io, match.user2.toString(), 'matchAccepted', { matchId: match._id });
+  } else {
+    console.log('⚠️ emitToUser function not available');
+  }
+}
     res.json({
       match,
       chatOpen: match.status === 'active',
@@ -181,13 +194,107 @@ exports.giveTrustPoint = async (req, res) => {
 // @route GET /api/matches/my-matches
 exports.getMyMatches = async (req, res) => {
   try {
+    const currentUser = await User.findById(req.user.id);
+    const blockedIds = currentUser.blockedUsers || [];
+    
     const matches = await Match.find({
       $or: [{ user1: req.user.id }, { user2: req.user.id }],
       status: 'active',
+      user1: { $nin: blockedIds },
+      user2: { $nin: blockedIds },
     }).populate('user1', '-password -email')
       .populate('user2', '-password -email');
-
+    
     res.json(matches);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// @route GET /api/matches/:id/trust-info
+exports.getTrustInfo = async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+
+    const isUser1 = match.user1.toString() === req.user.id;
+    const trustField = isUser1 ? 'user1TrustPoints' : 'user2TrustPoints';
+    const lastTrustField = isUser1 ? 'user1LastTrust' : 'user2LastTrust';
+
+    const combinedPercent = Math.round(((match.user1TrustPoints + match.user2TrustPoints) / 20) * 100);
+    
+    let canGiveToday = true;
+    const lastTrust = match[lastTrustField];
+    if (lastTrust) {
+      const today = new Date();
+      const last = new Date(lastTrust);
+      if (today.getDate() === last.getDate() &&
+          today.getMonth() === last.getMonth() &&
+          today.getFullYear() === last.getFullYear()) {
+        canGiveToday = false;
+      }
+    }
+
+    res.json({
+      trustPercent: combinedPercent,
+      myTrustPoints: match[trustField],
+      canGivePoint: canGiveToday,
+      profileUnlocked: combinedPercent >= 90,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @route GET /api/matches/:id/unlocked-info
+exports.getUnlockedInfo = async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id)
+      .populate('user1', '-password')
+      .populate('user2', '-password');
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+
+    const currentUserId = req.user.id;
+    const otherUser = match.user1._id.toString() === currentUserId ? match.user2 : match.user1;
+    const currentUserIsUser1 = match.user1._id.toString() === currentUserId;
+    
+    const messageCount = match.messageCount;
+    const trustPercent = Math.round(((match.user1TrustPoints + match.user2TrustPoints) / 20) * 100);
+    
+    // Determine what is unlocked based on thresholds
+    const unlocked = {
+      firstName: messageCount >= 15,
+      ageAndRegion: messageCount >= 30,
+      photo: messageCount >= 50,
+      interests: messageCount >= 75,
+      fullProfile: trustPercent >= 90,
+    };
+    
+    const revealedInfo = {};
+    if (unlocked.firstName) revealedInfo.firstName = otherUser.firstName;
+    if (unlocked.ageAndRegion) {
+      revealedInfo.age = otherUser.age;
+      revealedInfo.region = otherUser.region;
+    }
+    if (unlocked.photo) revealedInfo.photo = otherUser.photo;
+    if (unlocked.interests) revealedInfo.interests = otherUser.interests;
+    if (unlocked.fullProfile) {
+      revealedInfo.bio = otherUser.bio;
+      revealedInfo.civilStatus = otherUser.civilStatus;
+      revealedInfo.educationLevel = otherUser.educationLevel;
+      revealedInfo.workDomain = otherUser.workDomain;
+      revealedInfo.studyDomain = otherUser.studyDomain;
+    }
+    
+    // Always include anonymous placeholder if not unlocked
+    if (!revealedInfo.firstName) revealedInfo.firstName = '???';
+    if (!revealedInfo.ageAndRegion) revealedInfo.ageRegionDisplay = '???';
+    
+    res.json({
+      unlocked,
+      revealedInfo,
+      messageCount,
+      trustPercent,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

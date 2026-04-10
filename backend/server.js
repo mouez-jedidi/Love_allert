@@ -10,7 +10,7 @@ const server = http.createServer(app);
 const io = socketIO(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
-
+app.set('io', io);
 // Middleware
 app.use(cors());
 app.use(express.json());

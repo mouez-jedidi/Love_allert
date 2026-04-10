@@ -19,7 +19,6 @@ export default function GalleryScreen({ navigation, route }) {
   const [likes, setLikes] = useState({});
   const isUnlocked = trustPercent >= 90;
 
-  // Heart animation
   const heartAnim = useRef(new Animated.Value(0)).current;
   const lastTap = useRef(null);
 
@@ -115,17 +114,13 @@ export default function GalleryScreen({ navigation, route }) {
     }
   };
 
-  // Double tap to like
   const handleDoubleTap = (photoUrl) => {
     const now = Date.now();
     if (lastTap.current && now - lastTap.current < 300) {
-      // Double tap detected
       setLikes(prev => ({
         ...prev,
         [photoUrl]: (prev[photoUrl] || 0) + 1,
       }));
-
-      // Heart animation
       heartAnim.setValue(0);
       Animated.sequence([
         Animated.spring(heartAnim, {
@@ -147,20 +142,17 @@ export default function GalleryScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtn}>← Retour</Text>
+          <Text style={styles.backBtn}>Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>📸 Galerie</Text>
+        <Text style={styles.headerTitle}>Galerie</Text>
         <View style={{ width: 70 }} />
       </View>
 
-      {/* Lock banner */}
       {!isOwnProfile && !isUnlocked && (
         <View style={styles.lockBanner}>
-          <Text style={styles.lockBannerIcon}>🔒</Text>
+          <Text style={styles.lockBannerIcon}>⌘</Text>
           <View>
             <Text style={styles.lockBannerTitle}>Galerie verrouillée</Text>
             <Text style={styles.lockBannerSub}>
@@ -170,11 +162,9 @@ export default function GalleryScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Gallery grid */}
       <ScrollView contentContainerStyle={styles.content}>
         {gallery.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📷</Text>
             <Text style={styles.emptyTitle}>
               {isOwnProfile ? 'Aucune photo' : 'Galerie vide'}
             </Text>
@@ -198,15 +188,14 @@ export default function GalleryScreen({ navigation, route }) {
                 activeOpacity={0.9}>
                 {!isOwnProfile && !isUnlocked ? (
                   <View style={styles.lockedPhoto}>
-                    <Text style={styles.lockedPhotoIcon}>🔒</Text>
+                    <Text style={styles.lockedPhotoIcon}>X</Text>
                   </View>
                 ) : (
                   <Image source={{ uri: photoUrl }} style={styles.photo} />
                 )}
-                {/* Likes count */}
                 {likes[photoUrl] > 0 && (
                   <View style={styles.likeBadge}>
-                    <Text style={styles.likeBadgeText}>❤️ {likes[photoUrl]}</Text>
+                    <Text style={styles.likeBadgeText}>♥ {likes[photoUrl]}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -215,34 +204,30 @@ export default function GalleryScreen({ navigation, route }) {
         )}
       </ScrollView>
 
-      {/* FAB - Floating Action Button */}
       {isOwnProfile && (
         <View style={styles.fabContainer}>
-          {/* Sub buttons */}
-{showFab && (
-  <View style={styles.fabSubContainer}>
-    <TouchableOpacity
-      style={styles.fabSubBtn}
-      onPress={handlePickFromGallery}>
-      <Text style={styles.fabSubText}>🖼️ Galerie</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={styles.fabSubBtn}
-      onPress={handleAddPhoto}>
-      <Text style={styles.fabSubText}>📷 Caméra</Text>
-    </TouchableOpacity>
-  </View>
-)}
-          {/* Main FAB button */}
+          {showFab && (
+            <View style={styles.fabSubContainer}>
+              <TouchableOpacity
+                style={styles.fabSubBtn}
+                onPress={handlePickFromGallery}>
+                <Text style={styles.fabSubText}>Galerie</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.fabSubBtn}
+                onPress={handleAddPhoto}>
+                <Text style={styles.fabSubText}>Caméra</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
             style={styles.fab}
             onPress={() => setShowFab(!showFab)}>
-            <Text style={styles.fabIcon}>{showFab ? '✕' : '+'}</Text>
+            <Text style={styles.fabIcon}>{showFab ? '×' : '+'}</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Photo viewer modal */}
       <Modal
         visible={!!selectedPhoto}
         transparent
@@ -252,10 +237,9 @@ export default function GalleryScreen({ navigation, route }) {
           <TouchableOpacity
             style={styles.modalClose}
             onPress={() => setSelectedPhoto(null)}>
-            <Text style={styles.modalCloseText}>✕</Text>
+            <Text style={styles.modalCloseText}>X</Text>
           </TouchableOpacity>
 
-          {/* Photo */}
           <TouchableOpacity
             activeOpacity={1}
             style={styles.modalPhotoWrap}
@@ -265,8 +249,6 @@ export default function GalleryScreen({ navigation, route }) {
               style={styles.modalPhoto}
               resizeMode="contain"
             />
-
-            {/* Heart animation */}
             <Animated.Text style={[
               styles.heartAnim,
               {
@@ -274,16 +256,15 @@ export default function GalleryScreen({ navigation, route }) {
                 transform: [{ scale: heartAnim }],
               }
             ]}>
-              ❤️
+              ♥
             </Animated.Text>
           </TouchableOpacity>
 
-          {/* Bottom actions */}
           <View style={styles.modalActions}>
             <TouchableOpacity
               style={styles.likeBtn}
               onPress={() => handleDoubleTap(selectedPhoto)}>
-              <Text style={styles.likeBtnIcon}>❤️</Text>
+              <Text style={styles.likeBtnIcon}>♥</Text>
               <Text style={styles.likeBtnText}>
                 {likes[selectedPhoto] || 0}
               </Text>
@@ -293,14 +274,13 @@ export default function GalleryScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.deleteBtn}
                 onPress={() => handleRemovePhoto(selectedPhoto)}>
-                <Text style={styles.deleteBtnText}>🗑️ Supprimer</Text>
+                <Text style={styles.deleteBtnText}>Supprimer</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
       </Modal>
 
-      {/* Backdrop to close FAB */}
       {showFab && (
         <TouchableOpacity
           style={styles.fabBackdrop}
@@ -308,13 +288,12 @@ export default function GalleryScreen({ navigation, route }) {
           activeOpacity={1}
         />
       )}
-
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0a12' },
+  container: { flex: 1, backgroundColor: '#050505' },
   header: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
@@ -322,83 +301,80 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  backBtn: { color: 'rgba(255,255,255,0.4)', fontSize: 14, width: 70 },
-  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  backBtn: { color: 'rgba(255,255,255,0.5)', fontSize: 14, letterSpacing: 0.5, width: 70 },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
 
   lockBanner: {
     flexDirection: 'row', alignItems: 'center',
     gap: 12, margin: 16,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(217,160,102,0.08)',
+    borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(217,160,102,0.2)',
   },
-  lockBannerIcon: { fontSize: 28 },
-  lockBannerTitle: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  lockBannerSub: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 },
+  lockBannerIcon: { fontSize: 24, color: '#D9A066' },
+  lockBannerTitle: { color: '#fff', fontSize: 14, fontWeight: '600', letterSpacing: 0.5 },
+  lockBannerSub: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 },
 
-content: { padding: 2, paddingBottom: 100 },
-
+  content: { padding: 2, paddingBottom: 100 },
   emptyState: {
     alignItems: 'center', paddingTop: 80, gap: 12, padding: 32,
   },
-  emptyIcon: { fontSize: 60 },
-  emptyTitle: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  emptyTitle: { color: '#fff', fontSize: 18, fontWeight: '600', letterSpacing: 1, textAlign: 'center' },
   emptySub: {
     color: 'rgba(255,255,255,0.4)',
-    fontSize: 13, textAlign: 'center', lineHeight: 22,
+    fontSize: 12, textAlign: 'center', lineHeight: 20,
   },
 
-grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
-photoWrap: {
-  width: '32.5%',
-  aspectRatio: 1,
-  position: 'relative',
-},
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
+  photoWrap: {
+    width: '32.5%',
+    aspectRatio: 1,
+    position: 'relative',
+  },
   photo: { width: '100%', height: '100%' },
   lockedPhoto: {
     width: '100%', height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center', justifyContent: 'center',
   },
-  lockedPhotoIcon: { fontSize: 28 },
+  lockedPhotoIcon: { fontSize: 24, color: '#D9A066' },
   likeBadge: {
     position: 'absolute', bottom: 6, left: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2,
   },
-  likeBadgeText: { color: '#fff', fontSize: 10 },
+  likeBadgeText: { color: '#D9A066', fontSize: 10, fontWeight: '600' },
 
-  // FAB
-fabContainer: {
-  position: 'absolute', bottom: 30, right: 20,
-  alignItems: 'flex-end', gap: 10, zIndex: 100,
-},
-fabSubContainer: {
-  alignItems: 'flex-end', gap: 8, marginBottom: 8,
-},
-fabSubBtn: {
-  backgroundColor: '#1a1225',
-  borderWidth: 1, borderColor: 'rgba(255,51,102,0.3)',
-  borderRadius: 20,
-  paddingHorizontal: 16, paddingVertical: 10,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.3, shadowRadius: 6, elevation: 6,
-},
-fabSubText: {
-  color: '#fff', fontSize: 14, fontWeight: '600',
-},
-fab: {
-  width: 56, height: 56, borderRadius: 28,
-  backgroundColor: '#FF3366',
-  alignItems: 'center', justifyContent: 'center',
-  shadowColor: '#FF3366',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.5, shadowRadius: 12, elevation: 10,
-},
-fabIcon: { color: '#fff', fontSize: 28, fontWeight: '300' },
+  fabContainer: {
+    position: 'absolute', bottom: 30, right: 20,
+    alignItems: 'flex-end', gap: 10, zIndex: 100,
+  },
+  fabSubContainer: {
+    alignItems: 'flex-end', gap: 8, marginBottom: 8,
+  },
+  fabSubBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+  fabSubText: {
+    color: '#fff', fontSize: 12, fontWeight: '500', letterSpacing: 0.5,
+  },
+  fab: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#D9A066',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#D9A066',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  },
+  fabIcon: { color: '#050505', fontSize: 28, fontWeight: '300' },
+  fabBackdrop: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
 
-  // Modal
   modalBg: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
     justifyContent: 'center', alignItems: 'center',
@@ -419,6 +395,7 @@ fabIcon: { color: '#fff', fontSize: 28, fontWeight: '300' },
   heartAnim: {
     position: 'absolute',
     fontSize: 80,
+    color: '#D9A066',
   },
   modalActions: {
     position: 'absolute', bottom: 60,
@@ -430,14 +407,15 @@ fabIcon: { color: '#fff', fontSize: 28, fontWeight: '300' },
     gap: 6, backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 20, paddingVertical: 12,
     borderRadius: 30,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
-  likeBtnIcon: { fontSize: 20 },
-  likeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  likeBtnIcon: { color: '#D9A066', fontSize: 18 },
+  likeBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   deleteBtn: {
-    backgroundColor: 'rgba(239,68,68,0.2)',
+    backgroundColor: 'transparent',
     paddingHorizontal: 20, paddingVertical: 12,
     borderRadius: 30,
-    borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    borderWidth: 1, borderColor: 'rgba(217,160,102,0.4)',
   },
-  deleteBtnText: { color: '#ef4444', fontSize: 14, fontWeight: '600' },
+  deleteBtnText: { color: '#D9A066', fontSize: 12, fontWeight: '500', letterSpacing: 0.5 },
 });

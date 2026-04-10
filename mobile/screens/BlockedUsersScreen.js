@@ -51,7 +51,7 @@ export default function BlockedUsersScreen({ navigation }) {
   const renderUser = ({ item }) => (
     <View style={styles.userCard}>
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>🚫</Text>
+        <Text style={styles.avatarText}>X</Text>
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>Utilisateur bloqué</Text>
@@ -71,7 +71,7 @@ export default function BlockedUsersScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtn}>← Retour</Text>
+          <Text style={styles.backBtn}>Retour</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Utilisateurs bloqués</Text>
         <View style={{ width: 60 }} />
@@ -83,7 +83,6 @@ export default function BlockedUsersScreen({ navigation }) {
         </View>
       ) : blockedUsers.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>✅</Text>
           <Text style={styles.emptyTitle}>Aucun utilisateur bloqué</Text>
           <Text style={styles.emptySub}>
             Les utilisateurs que vous bloquez apparaîtront ici
@@ -102,7 +101,7 @@ export default function BlockedUsersScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0a12' },
+  container: { flex: 1, backgroundColor: '#050505' },
   header: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
@@ -110,42 +109,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  backBtn: { color: 'rgba(255,255,255,0.4)', fontSize: 14, width: 60 },
-  title: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  backBtn: { color: 'rgba(255,255,255,0.5)', fontSize: 14, letterSpacing: 0.5, width: 60 },
+  title: { color: '#fff', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
   list: { padding: 16, gap: 12 },
   userCard: {
     flexDirection: 'row', alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: 'rgba(217,160,102,0.1)',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)',
+    borderWidth: 1, borderColor: 'rgba(217,160,102,0.2)',
   },
-  avatarText: { fontSize: 22 },
+  avatarText: { fontSize: 18, color: '#D9A066', fontWeight: '500' },
   userInfo: { flex: 1 },
-  userName: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  userDate: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 2 },
+  userName: { color: '#fff', fontSize: 14, fontWeight: '600', letterSpacing: 0.5 },
+  userDate: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 },
   unblockBtn: {
     paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'transparent',
     borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
-  unblockBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600' },
+  unblockBtnText: { color: '#fff', fontSize: 11, fontWeight: '500', letterSpacing: 0.5 },
   emptyState: {
     flex: 1, alignItems: 'center',
     justifyContent: 'center', gap: 12, padding: 32,
   },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  emptyTitle: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center', letterSpacing: 0.5 },
   emptySub: {
     color: 'rgba(255,255,255,0.4)',
-    fontSize: 13, textAlign: 'center', lineHeight: 20,
+    fontSize: 12, textAlign: 'center', lineHeight: 18,
   },
   emptyText: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
 });

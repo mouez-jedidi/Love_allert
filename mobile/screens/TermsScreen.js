@@ -15,7 +15,7 @@ export default function TermsScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtn}>← Retour</Text>
+          <Text style={styles.backBtn}>Retour</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Conditions d'utilisation</Text>
         <View style={{ width: 60 }} />
@@ -82,7 +82,7 @@ export default function TermsScreen({ navigation, route }) {
       {onAccept && (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.acceptBtn} onPress={handleAccept}>
-            <Text style={styles.acceptBtnText}>✓ J'accepte les conditions</Text>
+            <Text style={styles.acceptBtnText}>J'accepte les conditions</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -92,7 +92,7 @@ export default function TermsScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0a12' },
+  container: { flex: 1, backgroundColor: '#050505' },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
@@ -101,27 +101,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  backBtn: { color: 'rgba(255,255,255,0.4)', fontSize: 14, width: 60 },
-  title: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  backBtn: { color: 'rgba(255,255,255,0.5)', fontSize: 14, letterSpacing: 0.5, width: 60 },
+  title: { color: '#fff', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
 
   scroll: { flex: 1 },
   content: { padding: 24, paddingBottom: 40 },
 
   lastUpdate: {
-    color: 'rgba(255,255,255,0.25)',
-    fontSize: 12, marginBottom: 24,
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 11, marginBottom: 24, letterSpacing: 0.5,
     textAlign: 'center',
   },
 
   section: {
-    marginBottom: 24,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   sectionTitle: {
-    color: '#FF3366', fontSize: 14,
-    fontWeight: '700', marginBottom: 8,
+    color: '#D9A066', fontSize: 14,
+    fontWeight: '600', marginBottom: 8, letterSpacing: 0.5,
   },
   sectionText: {
     color: 'rgba(255,255,255,0.5)',
@@ -134,12 +134,12 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.06)',
   },
   acceptBtn: {
-    backgroundColor: '#FF3366',
-    padding: 16, borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 8,
     alignItems: 'center',
-    shadowColor: '#FF3366',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4, shadowRadius: 15, elevation: 10,
+    backgroundColor: 'transparent',
   },
-  acceptBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  acceptBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 2 },
 });

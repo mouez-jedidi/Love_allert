@@ -5,7 +5,7 @@ const {
   getNearbyUsers, blockUser,
   deleteAccount, reportUser,
   addToGallery, removeFromGallery,
-  getUserGallery, getBlockedUsers, unblockUser,
+  getUserGallery, getBlockedUsers, unblockUser,getUserById,updateFcmToken,
 } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 
@@ -20,4 +20,6 @@ router.delete('/gallery/:photoUrl', auth, removeFromGallery);
 router.get('/:id/gallery', auth, getUserGallery);
 router.get('/blocked', auth, getBlockedUsers);
 router.post('/unblock/:id', auth, unblockUser);
+router.get('/:id', auth, getUserById);
+router.put('/update-fcm-token', auth, updateFcmToken);
 module.exports = router;

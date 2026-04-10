@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NAV_ITEMS = [
-  { icon: '🏠', label: 'Accueil', screen: 'Home' },
-  { icon: '💬', label: 'Chats', screen: 'ChatList' },
-  { icon: '👤', label: 'Profil', screen: 'MyProfile' },
+  { label: 'Accueil', screen: 'Home', symbol: '⌂' },
+  { label: 'Chats', screen: 'ChatList', symbol: '⌵' },
+  { label: 'Profil', screen: 'MyProfile', symbol: '◎' },
 ];
 
 export default function BottomNav({ navigation, active }) {
@@ -30,7 +30,7 @@ export default function BottomNav({ navigation, active }) {
           style={styles.navItem}
           onPress={() => navigation.navigate(item.screen)}>
           <View style={styles.iconWrap}>
-            <Text style={styles.navIcon}>{item.icon}</Text>
+            <Text style={styles.navSymbol}>{item.symbol}</Text>
             {item.screen === 'ChatList' && unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -53,27 +53,53 @@ export default function BottomNav({ navigation, active }) {
 
 const styles = StyleSheet.create({
   bottomNav: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: 70, flexDirection: 'row',
-    backgroundColor: 'rgba(13,10,18,0.97)',
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center', justifyContent: 'space-around',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    flexDirection: 'row',
+    backgroundColor: '#050505',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     paddingBottom: 8,
   },
   navItem: { alignItems: 'center', gap: 3 },
   iconWrap: { position: 'relative' },
-  navIcon: { fontSize: 22 },
+  navSymbol: {
+    fontSize: 20,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '300',
+  },
   badge: {
-    position: 'absolute', top: -4, right: -8,
-    backgroundColor: '#FF3366',
-    borderRadius: 10, minWidth: 18, height: 18,
-    alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    backgroundColor: '#D9A066',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 4,
-    borderWidth: 2, borderColor: 'rgba(13,10,18,0.97)',
+    borderWidth: 1.5,
+    borderColor: '#050505',
   },
-  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  badgeText: {
+    color: '#050505',
+    fontSize: 9,
+    fontWeight: '800',
+  },
   navLabel: {
-    fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: '500',
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.3)',
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
-  navLabelActive: { color: '#FF3366' },
+  navLabelActive: {
+    color: '#D9A066',
+    fontWeight: '700',
+  },
 });

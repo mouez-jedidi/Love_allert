@@ -25,6 +25,7 @@ import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import BlockReportScreen from './screens/BlockReportScreen';
 import GalleryScreen from './screens/GalleryScreen';
 import BlockedUsersScreen from './screens/BlockedUsersScreen';
+import AboutScreen from './screens/AboutScreen';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -136,6 +137,7 @@ export default function App() {
         <Stack.Screen name="BlockReport" component={BlockReportScreen} />
         <Stack.Screen name="Gallery" component={GalleryScreen} />
         <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+        <Stack.Screen name="About" component={AboutScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

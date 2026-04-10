@@ -31,15 +31,21 @@ export default function ProfileCompletion({ user }) {
   const percent = calculateCompletion(user);
 
   const getColor = () => {
-    if (percent >= 80) return '#22c55e';
-    if (percent >= 50) return '#eab308';
-    return '#FF3366';
+    if (percent >= 80) return '#88c9a0';      // muted green (copper complementary)
+    if (percent >= 50) return '#D9A066';      // copper/gold
+    return 'rgba(217,160,102,0.6)';           // lighter copper
   };
 
   const getLabel = () => {
-    if (percent >= 80) return 'Excellent profil 🌟';
-    if (percent >= 50) return 'Bon profil 👍';
+    if (percent >= 80) return 'Excellent profil';
+    if (percent >= 50) return 'Bon profil';
     return 'Complétez votre profil';
+  };
+
+  const getHint = () => {
+    if (percent < 50) return 'Ajoutez vos intérêts et votre bio';
+    if (percent < 80) return 'Ajoutez plus de détails';
+    return 'Presque parfait !';
   };
 
   return (
@@ -52,11 +58,7 @@ export default function ProfileCompletion({ user }) {
         <View style={[styles.fill, { width: `${percent}%`, backgroundColor: getColor() }]} />
       </View>
       {percent < 100 && (
-        <Text style={styles.hint}>
-          {percent < 50 ? '💡 Ajoutez vos intérêts et votre bio' :
-           percent < 80 ? '💡 Ajoutez plus de détails' :
-           '💡 Presque parfait !'}
-        </Text>
+        <Text style={styles.hint}>{getHint()}</Text>
       )}
     </View>
   );
@@ -64,22 +66,43 @@ export default function ProfileCompletion({ user }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 16,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  label: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '600' },
-  percent: { fontSize: 18, fontWeight: '800' },
+  label: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  percent: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   track: {
-    height: 6, backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 3, marginBottom: 8,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 2,
+    marginBottom: 8,
   },
-  fill: { height: '100%', borderRadius: 3 },
-  hint: { color: 'rgba(255,255,255,0.3)', fontSize: 11 },
+  fill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  hint: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
 });

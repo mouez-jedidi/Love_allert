@@ -63,3 +63,12 @@ export const onUserTyping = (callback) => {
 export const onUserStopTyping = (callback) => {
   if (socket) socket.on('userStopTyping', callback);
 };
+
+// NEW: Real-time match acceptance
+export const onMatchAccepted = (callback) => {
+  if (socket) socket.on('matchAccepted', callback);
+};
+
+export const offMatchAccepted = () => {
+  if (socket) socket.off('matchAccepted');
+};

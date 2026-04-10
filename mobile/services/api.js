@@ -142,4 +142,13 @@ export const getUserGallery = async (userId) => {
   const res = await api.get(`/users/${userId}/gallery`);
   return res.data;
 };
+export const getTrustInfo = async (matchId) => {
+  const res = await api.get(`/matches/${matchId}/trust-info`);
+  return res.data;
+};
+
+export const getUnlockedInfo = async (matchId) => {
+  const res = await api.get(`/matches/${matchId}/unlocked-info`);
+  return res.data;
+};
 export default api;

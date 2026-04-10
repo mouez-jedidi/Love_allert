@@ -3,16 +3,21 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   Animated, Easing, SafeAreaView,
 } from 'react-native';
+import { respondToMatch } from '../services/api';
+import { onMatchAccepted, offMatchAccepted } from '../services/socket';
 
-export default function MatchScreen({ navigation }) {
+export default function MatchScreen({ navigation, route }) {
+  const { matchId } = route.params;
+  const [decision, setDecision] = useState(null); // null | 'accepted' | 'refused'
+  const [waiting, setWaiting] = useState(false);
+  const [error, setError] = useState(null);
+
   const pulse1 = useRef(new Animated.Value(1)).current;
   const pulse2 = useRef(new Animated.Value(1)).current;
   const pulse3 = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(80)).current;
-  const [decision, setDecision] = useState(null); // null | 'accepted' | 'refused'
-  const [waiting, setWaiting] = useState(false);
 
   useEffect(() => {
     // Entrance animation
@@ -61,27 +66,50 @@ export default function MatchScreen({ navigation }) {
     pulseRing(pulse1, 0);
     pulseRing(pulse2, 600);
     pulseRing(pulse3, 1200);
+
+    // Listen for match acceptance from the other user
+    onMatchAccepted((data) => {
+      if (data.matchId === matchId) {
+        navigation.replace('Chat', { matchId });
+      }
+    });
+
+    return () => {
+      offMatchAccepted();
+    };
   }, []);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     setDecision('accepted');
     setWaiting(true);
-    // Simulate other user accepting after 2 seconds
-    setTimeout(() => {
-      navigation.navigate('Chat', { matchId: '001' });
-    }, 2000);
+    try {
+      const res = await respondToMatch(matchId, true);
+      if (res.chatOpen) {
+        // If chat already open (other user already accepted)
+        navigation.replace('Chat', { matchId });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur, réessayez');
+      setDecision(null);
+      setWaiting(false);
+    }
   };
 
-  const handleRefuse = () => {
+  const handleRefuse = async () => {
     setDecision('refused');
-    setTimeout(() => {
-      navigation.navigate('Home');
-    }, 1500);
+    try {
+      await respondToMatch(matchId, false);
+      setTimeout(() => {
+        navigation.navigate('Home');
+      }, 1500);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur');
+      setDecision(null);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-
       {/* Background rings */}
       <View style={styles.ringsContainer}>
         <Animated.View style={[styles.ring, { transform: [{ scale: pulse1 }], opacity: 0.3 }]} />
@@ -90,45 +118,30 @@ export default function MatchScreen({ navigation }) {
       </View>
 
       <Animated.View style={[styles.content, { opacity: fadeIn }]}>
-
-        {/* Heart icon */}
-        <Animated.View style={[
-          styles.heartContainer,
-          { transform: [{ scale: heartScale }] }
-        ]}>
+        <Animated.View style={[styles.heartContainer, { transform: [{ scale: heartScale }] }]}>
           <Text style={styles.heartEmoji}>💘</Text>
         </Animated.View>
 
-        {/* Title */}
         <Text style={styles.title}>Love<Text style={styles.titleAccent}>Alert</Text> !</Text>
         <Text style={styles.subtitle}>
           Une personne compatible{'\n'}est proche de vous
         </Text>
 
-        {/* Mystery card */}
-        <Animated.View style={[
-          styles.mysteryCard,
-          { transform: [{ translateY: cardSlide }] }
-        ]}>
-          {/* Question marks */}
+        <Animated.View style={[styles.mysteryCard, { transform: [{ translateY: cardSlide }] }]}>
           <View style={styles.mysteryAvatar}>
             <Text style={styles.mysteryIcon}>❓</Text>
           </View>
-
           <View style={styles.mysteryInfo}>
             <Text style={styles.mysteryName}>Identité inconnue</Text>
             <Text style={styles.mysteryDesc}>
               Acceptez pour commencer à vous découvrir mutuellement
             </Text>
           </View>
-
-          {/* Lock icon */}
           <View style={styles.lockBadge}>
             <Text style={styles.lockIcon}>🔒</Text>
           </View>
         </Animated.View>
 
-        {/* How it works */}
         <View style={styles.howItWorks}>
           <Text style={styles.howTitle}>Comment ça marche ?</Text>
           <View style={styles.howSteps}>
@@ -147,7 +160,8 @@ export default function MatchScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Decision state */}
+        {error && <Text style={styles.errorText}>{error}</Text>}
+
         {!decision && (
           <View style={styles.actions}>
             <TouchableOpacity style={styles.btnRefuse} onPress={handleRefuse}>
@@ -159,7 +173,7 @@ export default function MatchScreen({ navigation }) {
           </View>
         )}
 
-        {decision === 'accepted' && (
+        {decision === 'accepted' && waiting && (
           <View style={styles.waitingState}>
             <Text style={styles.waitingEmoji}>⏳</Text>
             <Text style={styles.waitingText}>En attente de l'autre personne...</Text>
@@ -173,9 +187,7 @@ export default function MatchScreen({ navigation }) {
             <Text style={styles.waitingText}>Peut-être la prochaine fois !</Text>
           </View>
         )}
-
       </Animated.View>
-
     </SafeAreaView>
   );
 }
@@ -187,7 +199,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   ringsContainer: {
     position: 'absolute',
     alignItems: 'center',
@@ -201,13 +212,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FF3366',
   },
-
   content: {
     alignItems: 'center',
     paddingHorizontal: 24,
     width: '100%',
   },
-
   heartContainer: {
     width: 90, height: 90, borderRadius: 45,
     backgroundColor: '#FF3366',
@@ -219,7 +228,6 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   heartEmoji: { fontSize: 40 },
-
   title: {
     fontSize: 34, fontWeight: '800',
     color: '#fff', marginBottom: 8,
@@ -230,7 +238,6 @@ const styles = StyleSheet.create({
     fontSize: 14, textAlign: 'center',
     lineHeight: 22, marginBottom: 28,
   },
-
   mysteryCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -262,7 +269,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   lockIcon: { fontSize: 16 },
-
   howItWorks: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -287,7 +293,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   howStepText: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
-
   actions: {
     flexDirection: 'row',
     gap: 12, width: '100%',
@@ -314,7 +319,6 @@ const styles = StyleSheet.create({
   btnAcceptText: {
     color: '#fff', fontSize: 15, fontWeight: '700',
   },
-
   waitingState: {
     alignItems: 'center', gap: 8,
     padding: 20,
@@ -327,5 +331,11 @@ const styles = StyleSheet.create({
   waitingHint: {
     color: 'rgba(255,255,255,0.3)',
     fontSize: 12, textAlign: 'center',
+  },
+  errorText: {
+    color: '#FF3366',
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
   },
 });
