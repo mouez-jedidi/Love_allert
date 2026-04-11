@@ -21,19 +21,29 @@ api.interceptors.request.use(async (config) => {
 // AUTH
 // ═══════════════════════════════
 export const register = async (userData) => {
+  console.log('🔵 Register appelé avec :', userData.email);
+  console.log('🔵 URL de l\'API :', api.defaults.baseURL);
   try {
     const res = await api.post('/auth/register', userData);
+    console.log('🔵 Réponse reçue :', res.data);
     await AsyncStorage.setItem('token', res.data.token);
     await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
     return res.data;
   } catch (err) {
-    console.log('API register error:', err.response?.data || err.message);
+    console.log('🔴 Erreur register :', err.response?.data || err.message);
     throw err;
   }
 };
 export const sendPreVerificationEmail = async (email, firstName) => {
-  const res = await api.post('/auth/pre-verify', { email, firstName });
-  return res.data;
+  console.log('🔵 sendPreVerificationEmail appelé avec :', email, firstName);
+  try {
+    const res = await api.post('/auth/pre-verify', { email, firstName });
+    console.log('🔵 Réponse pre-verify :', res.data);
+    return res.data;
+  } catch (err) {
+    console.log('🔴 Erreur pre-verify :', err.response?.data || err.message);
+    throw err;
+  }
 };
 
 export const checkPreVerificationCode = async (email, code) => {

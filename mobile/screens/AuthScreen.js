@@ -116,6 +116,8 @@ export default function AuthScreen({ navigation }) {
 
     try {
       setLoading(true);
+      console.log('🔵 Envoi des données :', { email, firstName, lastName });
+
       await sendPreVerificationEmail(email, firstName);
 
       const [day, month, year] = birthday.split('/').map(Number);

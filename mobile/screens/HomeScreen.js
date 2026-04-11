@@ -178,7 +178,7 @@ export default function HomeScreen({ navigation }) {
       }
 
       await connectSocket();
-      await registerForNotifications();
+      //await registerForNotifications();
 
       onNotificationResponse((response) => {
         const matchId = response?.notification?.request?.content?.data?.matchId;
