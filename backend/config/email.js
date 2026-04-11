@@ -1,17 +1,11 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendVerificationEmail = async (email, firstName, code) => {
   try {
-    await transporter.sendMail({
-      from: `"Love Alert 💘" <${process.env.EMAIL_USER}>`,
+    const { data, error } = await resend.emails.send({
+      from: 'Love Alert <onboarding@resend.dev>',
       to: email,
       subject: '💘 Vérifiez votre email — Love Alert',
       html: `
@@ -33,7 +27,13 @@ const sendVerificationEmail = async (email, firstName, code) => {
         </div>
       `,
     });
-    console.log('✅ Verification email sent to:', email);
+
+    if (error) {
+      console.log('❌ Email error:', error);
+      return false;
+    }
+
+    console.log('✅ Email sent:', data);
     return true;
   } catch (err) {
     console.log('❌ Email error:', err.message);
