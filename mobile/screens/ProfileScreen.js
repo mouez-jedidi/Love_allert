@@ -515,96 +515,91 @@ export default function ProfileScreen({ navigation }) {
     </View>
   );
 
-  const handleFinish = async () => {
-    console.log('handleFinish called');
-    console.log('photo:', profilePhoto);
-    console.log('region:', region);
-    console.log('objective:', objective);
-    console.log('minAge:', minAge, 'maxAge:', maxAge);
-    console.log('distance:', distance);
-    console.log('interests:', selectedInterests.length);
+const handleFinish = async () => {
+  console.log('handleFinish called');
+  console.log('photo URI locale:', profilePhoto);
+  console.log('region:', region);
+  console.log('objective:', objective);
+  console.log('minAge:', minAge, 'maxAge:', maxAge);
+  console.log('distance:', distance);
+  console.log('interests:', selectedInterests.length);
 
-    try {
-      if (!profilePhoto) {
-        Platform.OS === 'web'
-          ? window.alert('Veuillez prendre une photo avant de continuer')
-          : Alert.alert('Photo requise', 'Veuillez prendre une photo');
-        setStep(1);
-        return;
-      }
-
-      let photoUrl = profilePhoto;
-
-      if (profilePhoto && !profilePhoto.startsWith('http')) {
-        console.log('Uploading photo...');
-        photoUrl = await uploadPhoto(profilePhoto);
-        console.log('Photo URL:', photoUrl);
-      }
-
-      const profileData = {
-        photo: photoUrl,
-        height: parseInt(height) || null,
-        region,
-        civilStatus: civil,
-        religion,
-        languages: selectedLangs,
-        objective,
-        isStudent: status === 'student' || status === 'both',
-        isWorking: status === 'working' || status === 'both',
-        studyDomain,
-        studySpecialty,
-        university,
-        educationLevel,
-        workDomain,
-        workPost,
-        interests: selectedInterests,
-        bio,
-        minAge: parseInt(minAge) || 18,
-        maxAge: parseInt(maxAge) || 35,
-        maxDistance: parseInt(distance) || 500,
-      };
-
-      console.log('Profile data to save:', JSON.stringify(profileData));
-
-      const pendingStr = await AsyncStorage.getItem('pendingRegistration');
-
-      if (pendingStr) {
-        const pending = JSON.parse(pendingStr);
-        const { register } = await import('../services/api');
-
-        const result = await register({
-          firstName: pending.firstName,
-          lastName: pending.lastName,
-          age: pending.age,
-          birthday: pending.birthday,
-          zodiac: pending.zodiac,
-          sex: pending.sex,
-          email: pending.email,
-          password: pending.password,
-          isEmailVerified: true,
-          ...profileData,
-        });
-
-        console.log('Account created:', result);
-        await AsyncStorage.removeItem('pendingRegistration');
-        navigation.navigate('Home');
-      } else {
-        await updateProfile({
-          firstName,
-          lastName,
-          ...profileData,
-        });
-
-        console.log('Profile updated');
-        navigation.navigate('MyProfile');
-      }
-    } catch (err) {
-      console.log('Profile finish error:', err.message);
-      Platform.OS === 'web'
-        ? window.alert('Erreur: ' + err.message)
-        : Alert.alert('Erreur', err.message);
+  try {
+    if (!profilePhoto) {
+      Alert.alert('Photo requise', 'Veuillez prendre une photo avant de continuer');
+      setStep(1);
+      return;
     }
-  };
+
+    let photoUrl = null;
+    console.log('Upload de la photo...');
+    photoUrl = await uploadPhoto(profilePhoto);
+    console.log('URL retournée par uploadPhoto:', photoUrl);
+
+    if (!photoUrl) {
+      Alert.alert('Erreur', 'Impossible de télécharger la photo. Vérifiez votre connexion ou réessayez.');
+      return;
+    }
+
+    const profileData = {
+      photo: photoUrl,
+      height: parseInt(height) || null,
+      region,
+      civilStatus: civil,
+      religion,
+      languages: selectedLangs,
+      objective,
+      isStudent: status === 'student' || status === 'both',
+      isWorking: status === 'working' || status === 'both',
+      studyDomain,
+      studySpecialty,
+      university,
+      educationLevel,
+      workDomain,
+      workPost,
+      interests: selectedInterests,
+      bio,
+      minAge: parseInt(minAge) || 18,
+      maxAge: parseInt(maxAge) || 35,
+      maxDistance: parseInt(distance) || 500,
+    };
+
+    const pendingStr = await AsyncStorage.getItem('pendingRegistration');
+
+    if (pendingStr) {
+      const pending = JSON.parse(pendingStr);
+      const { register } = await import('../services/api');
+
+      const result = await register({
+        firstName: pending.firstName,
+        lastName: pending.lastName,
+        age: pending.age,
+        birthday: pending.birthday,
+        zodiac: pending.zodiac,
+        sex: pending.sex,
+        email: pending.email,
+        password: pending.password,
+        isEmailVerified: true,
+        ...profileData,
+      });
+
+      console.log('Account created:', result);
+      await AsyncStorage.removeItem('pendingRegistration');
+      navigation.navigate('Home');
+    } else {
+      await updateProfile({
+        firstName,
+        lastName,
+        ...profileData,
+      });
+      console.log('Profile updated');
+      navigation.navigate('MyProfile');
+    }
+  } catch (err) {
+    console.log('Profile finish error:', err.message);
+    Alert.alert('Erreur', err.message);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>

@@ -3,9 +3,21 @@ const UPLOAD_PRESET = 'lovealert_preset';
 
 export const uploadPhoto = async (photoUri) => {
   try {
-    console.log('📤 Starting upload...');
+    console.log('📤 Début upload vers Cloudinary...');
+    console.log('URI photo:', photoUri);
 
+    // Vérifier que l'URI est valide
+    if (!photoUri) {
+      console.log('❌ Aucune URI fournie');
+      return null;
+    }
+
+    // Récupérer le blob
     const response = await fetch(photoUri);
+    if (!response.ok) {
+      console.log('❌ Impossible de lire le fichier:', response.status);
+      return null;
+    }
     const blob = await response.blob();
 
     const formData = new FormData();
@@ -18,16 +30,17 @@ export const uploadPhoto = async (photoUri) => {
     });
 
     const data = await uploadResponse.json();
+    console.log('📦 Réponse Cloudinary:', data);
 
     if (data.secure_url) {
-      console.log('✅ Photo uploaded:', data.secure_url);
+      console.log('✅ Photo uploadée:', data.secure_url);
       return data.secure_url;
     } else {
-      console.log('❌ Cloudinary error:', JSON.stringify(data));
+      console.log('❌ Cloudinary error:', data.error?.message || JSON.stringify(data));
       return null;
     }
   } catch (err) {
-    console.log('❌ Upload error:', err.message);
+    console.log('❌ Erreur upload:', err.message);
     return null;
   }
 };
