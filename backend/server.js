@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const socketIO = require('socket.io');
-require('dotenv').config({ path: '.env' });
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: '.env' });
+}
 
 const app = express();
 const server = http.createServer(app);
