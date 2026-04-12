@@ -18,7 +18,7 @@ const sendVerificationEmail = async (toEmail, firstName, code) => {
       <p>À très vite sur Love Alert !</p>
     </div>
   `;
-  sendSmtpEmail.sender = { name: 'Love Alert', email: 'noreply@lovealert.com' };
+  sendSmtpEmail.sender = { name: 'Love Alert', email: 'mouez.jedidi@gmail.com' };
   sendSmtpEmail.to = [{ email: toEmail, name: firstName }];
 
   try {
