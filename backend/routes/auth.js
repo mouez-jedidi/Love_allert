@@ -1,22 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController');
+const {
+  register, login, getMe,
+  verifyEmail, resendCode,
+  sendPhoneOTP, verifyPhoneOTP,
+  forgotPassword, verifyResetCode, resetPassword,
+  preVerify, checkPreVerify,
+} = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
-// Routes publiques
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.post('/pre-verify', authController.preVerify);           // <-- Ajouter
-router.post('/check-pre-verify', authController.checkPreVerify); // <-- Ajouter
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/verify-reset-code', authController.verifyResetCode);
-router.post('/reset-password', authController.resetPassword);
+// Routes publiques (sans auth)
+router.post('/pre-verify', preVerify);
+router.post('/check-pre-verify', checkPreVerify);
+router.post('/register', register);
+router.post('/login', login);
+router.post('/verify-email', verifyEmail);       // <- plus de auth
+router.post('/resend-code', resendCode);         // <- plus de auth
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-code', verifyResetCode);
+router.post('/reset-password', resetPassword);
 
 // Routes protégées
-router.post('/verify-email', auth, authController.verifyEmail);
-router.post('/resend-code', auth, authController.resendCode);
-router.post('/send-phone-otp', auth, authController.sendPhoneOTP);
-router.post('/verify-phone-otp', auth, authController.verifyPhoneOTP);
-router.get('/me', auth, authController.getMe);
+router.get('/me', auth, getMe);
+router.post('/send-phone-otp', auth, sendPhoneOTP);
+router.post('/verify-phone-otp', auth, verifyPhoneOTP);
 
 module.exports = router;

@@ -19,15 +19,14 @@ exports.register = async (req, res) => {
   try {
     console.log('📥 Register body:', req.body);
     const {
-  email, password, firstName, lastName,
-  age, sex, birthday, zodiac,
-  photo, height, region, civilStatus, religion,
-  languages, objective, isStudent, isWorking,
-  studyDomain, studySpecialty, university,
-  educationLevel, workDomain, workPost,
-  interests, bio, minAge, maxAge, maxDistance,
-  isEmailVerified,
-} = req.body;
+      email, password, firstName, lastName,
+      age, sex, birthday, zodiac,
+      photo, height, region, civilStatus, religion,
+      languages, objective, isStudent, isWorking,
+      studyDomain, studySpecialty, university,
+      educationLevel, workDomain, workPost,
+      interests, bio, minAge, maxAge, maxDistance,
+    } = req.body;
 
     console.log('🔍 Checking if email exists...');
     const exists = await User.findOne({ email });
@@ -35,37 +34,39 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email déjà utilisé' });
     }
 
-    // Generate verification code
+    // Generate verification code and expiry
     const code = generateCode();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     console.log('✅ Email is free, creating user...');
-const user = await User.create({
-  email, password,
-  firstName, lastName,
-  age, sex, birthday, zodiac,
-  photo,
-  height: height || null,
-  region,
-  civilStatus,
-  religion,
-  languages: languages || [],
-  objective,
-  isStudent: isStudent || false,
-  isWorking: isWorking || false,
-  studyDomain,
-  studySpecialty,
-  university,
-  educationLevel,
-  workDomain,
-  workPost,
-  interests: interests || [],
-  bio,
-  minAge: minAge || 18,
-  maxAge: maxAge || 35,
-  maxDistance: maxDistance || 500,
-  isEmailVerified: isEmailVerified || false,
-});
+    const user = await User.create({
+      email, password,
+      firstName, lastName,
+      age, sex, birthday, zodiac,
+      photo,
+      height: height || null,
+      region,
+      civilStatus,
+      religion,
+      languages: languages || [],
+      objective,
+      isStudent: isStudent || false,
+      isWorking: isWorking || false,
+      studyDomain,
+      studySpecialty,
+      university,
+      educationLevel,
+      workDomain,
+      workPost,
+      interests: interests || [],
+      bio,
+      minAge: minAge || 18,
+      maxAge: maxAge || 35,
+      maxDistance: maxDistance || 500,
+      isEmailVerified: false,
+      emailVerificationCode: code,
+      emailVerificationExpiry: expiry,
+    });
 
     console.log('✅ User created:', user._id);
 
@@ -91,12 +92,15 @@ const user = await User.create({
   }
 };
 
-// @route POST /api/auth/verify-email
+// @route POST /api/auth/verify-email (NO auth middleware)
 exports.verifyEmail = async (req, res) => {
   try {
-    const { code } = req.body;
-    const user = await User.findById(req.user.id);
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email et code requis' });
+    }
 
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
@@ -110,7 +114,7 @@ exports.verifyEmail = async (req, res) => {
     }
 
     if (new Date() > user.emailVerificationExpiry) {
-      return res.status(400).json({ message: 'Code expiré' });
+      return res.status(400). json({ message: 'Code expiré' });
     }
 
     user.isEmailVerified = true;
@@ -124,11 +128,18 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// @route POST /api/auth/resend-code
+// @route POST /api/auth/resend-code (NO auth middleware)
 exports.resendCode = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email requis' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
 
     const code = generateCode();
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
@@ -137,7 +148,7 @@ exports.resendCode = async (req, res) => {
     user.emailVerificationExpiry = expiry;
     await user.save();
 
-    await sendVerificationEmail(user.email, user.firstName, code);
+    await sendVerificationEmail(email, user.firstName, code);
     res.json({ message: 'Code renvoyé' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -176,7 +187,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// @route GET /api/auth/me
+// @route GET /api/auth/me (protected)
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
@@ -185,7 +196,8 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-// @route POST /api/auth/send-phone-otp
+
+// @route POST /api/auth/send-phone-otp (protected)
 exports.sendPhoneOTP = async (req, res) => {
   try {
     const { phone } = req.body;
@@ -198,14 +210,30 @@ exports.sendPhoneOTP = async (req, res) => {
       return res.status(400).json({ message: result.error });
     }
 
-    // Save phone to user
     await User.findByIdAndUpdate(req.user.id, { phone });
-
     res.json({ message: 'Code envoyé par SMS' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
+// @route POST /api/auth/verify-phone-otp (protected)
+exports.verifyPhoneOTP = async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+
+    const result = await verifyOTP(phone, code);
+    if (!result.success) {
+      return res.status(400).json({ message: 'Code incorrect ou expiré' });
+    }
+
+    await User.findByIdAndUpdate(req.user.id, { isPhoneVerified: true });
+    res.json({ message: 'Téléphone vérifié ✅' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // @route POST /api/auth/forgot-password
 exports.forgotPassword = async (req, res) => {
   try {
@@ -274,32 +302,11 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// @route POST /api/auth/verify-phone-otp
-exports.verifyPhoneOTP = async (req, res) => {
-  try {
-    const { phone, code } = req.body;
-
-    const result = await verifyOTP(phone, code);
-    if (!result.success) {
-      return res.status(400).json({ message: 'Code incorrect ou expiré' });
-    }
-
-    await User.findByIdAndUpdate(req.user.id, {
-      isPhoneVerified: true,
-    });
-
-    res.json({ message: 'Téléphone vérifié ✅' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-// @route POST /api/auth/pre-verify
-// Send verification code WITHOUT creating account
+// @route POST /api/auth/pre-verify (sans création de compte)
 exports.preVerify = async (req, res) => {
   try {
     const { email, firstName } = req.body;
 
-    // Check if email already exists
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(400).json({ message: 'Email déjà utilisé' });
@@ -308,8 +315,6 @@ exports.preVerify = async (req, res) => {
     const code = generateCode();
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Store code in a temporary collection or cache
-    // We'll use a simple in-memory store for now
     global.verificationCodes = global.verificationCodes || {};
     global.verificationCodes[email] = { code, expiry, firstName };
 
@@ -338,7 +343,6 @@ exports.checkPreVerify = async (req, res) => {
       return res.status(400).json({ message: 'Code expiré' });
     }
 
-    // Mark as verified
     global.verificationCodes[email].verified = true;
     res.json({ message: 'Email vérifié ✅' });
   } catch (err) {

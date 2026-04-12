@@ -129,13 +129,13 @@ export const sendMessage = async (matchId, text) => {
   const res = await api.post(`/messages/${matchId}`, { text });
   return res.data;
 };
-export const verifyEmail = async (code) => {
-  const res = await api.post('/auth/verify-email', { code });
+export const verifyEmail = async (email, code) => {
+  const res = await api.post('/auth/verify-email', { email, code });
   return res.data;
 };
 
-export const resendVerificationCode = async () => {
-  const res = await api.post('/auth/resend-code');
+export const resendVerificationCode = async (email) => {
+  const res = await api.post('/auth/resend-code', { email });
   return res.data;
 };
 export const addToGallery = async (photoUrl) => {

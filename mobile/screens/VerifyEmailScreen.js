@@ -4,7 +4,6 @@ import {
   TextInput, SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { verifyEmail, resendVerificationCode, checkPreVerificationCode } from '../services/api';
 import api from '../services/api';
 
 export default function VerifyEmailScreen({ navigation, route }) {
@@ -36,12 +35,15 @@ export default function VerifyEmailScreen({ navigation, route }) {
       setError('');
 
       if (isPending) {
-        await checkPreVerificationCode(email, code);
+        // Vérification pour pré-inscription (sans compte)
+        await api.post('/auth/check-pre-verify', { email, code });
         setSuccess(true);
         setTimeout(() => navigation.navigate('Profile', { isPending: true }), 1500);
       } else {
-        await verifyEmail(code);
+        // Vérification classique (compte déjà créé mais email non vérifié)
+        await api.post('/auth/verify-email', { email, code });
         setSuccess(true);
+        // Mettre à jour le statut dans AsyncStorage
         const userStr = await AsyncStorage.getItem('user');
         if (userStr) {
           const user = JSON.parse(userStr);
@@ -61,10 +63,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
     try {
       if (isPending) {
         const pendingStr = await AsyncStorage.getItem('pendingRegistration');
-        const pending = JSON.parse(pendingStr);
-        await api.post('/auth/pre-verify', { email, firstName: pending.firstName });
+        const pending = pendingStr ? JSON.parse(pendingStr) : null;
+        await api.post('/auth/pre-verify', { email, firstName: pending?.firstName });
       } else {
-        await resendVerificationCode();
+        await api.post('/auth/resend-code', { email });
       }
       setCanResend(false);
       setCountdown(60);
@@ -76,14 +78,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Back button (optional, but consistent with AuthScreen) */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>Retour</Text>
         </TouchableOpacity>
 
-        {/* Brand header */}
         <View style={styles.logoWrap}>
           <Text style={styles.brandTitle}>LOVE</Text>
           <Text style={styles.brandSubtitle}>ALERT</Text>
@@ -141,6 +139,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
   );
 }
 
+// Les styles restent strictement identiques à votre version d'origine
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#050505' },
   content: {
@@ -150,22 +149,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingBottom: 40,
   },
-  backBtn: {
-    position: 'absolute',
-    top: 16,
-    left: 24,
-    zIndex: 10,
-  },
-  backText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 14,
-    letterSpacing: 1,
-  },
-  logoWrap: {
-    alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
-  },
+  backBtn: { position: 'absolute', top: 16, left: 24, zIndex: 10 },
+  backText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, letterSpacing: 1 },
+  logoWrap: { alignItems: 'center', marginBottom: 40, marginTop: 20 },
   brandTitle: {
     fontSize: 48,
     fontWeight: '200',
@@ -194,10 +180,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 32,
   },
-  email: {
-    color: '#D9A066',
-    fontWeight: '600',
-  },
+  email: { color: '#D9A066', fontWeight: '600' },
   successBox: {
     backgroundColor: 'rgba(217,160,102,0.1)',
     borderWidth: 1,
@@ -207,12 +190,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     width: '100%',
   },
-  successText: {
-    color: '#D9A066',
-    fontSize: 13,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
+  successText: { color: '#D9A066', fontSize: 13, textAlign: 'center', letterSpacing: 0.5 },
   errorBox: {
     backgroundColor: 'rgba(255,50,50,0.08)',
     borderWidth: 1,
@@ -222,11 +200,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     width: '100%',
   },
-  errorText: {
-    color: '#ff6b6b',
-    fontSize: 13,
-    textAlign: 'center',
-  },
+  errorText: { color: '#ff6b6b', fontSize: 13, textAlign: 'center' },
   codeInput: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.04)',
@@ -251,21 +225,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   btnDisabled: { opacity: 0.5 },
-  btnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
+  btnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 2 },
   resendRow: { marginTop: 24 },
-  resendLink: {
-    color: '#D9A066',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  resendTimer: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 12,
-  },
+  resendLink: { color: '#D9A066', fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+  resendTimer: { color: 'rgba(255,255,255,0.3)', fontSize: 12 },
 });
