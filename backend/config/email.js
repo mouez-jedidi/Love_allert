@@ -1,42 +1,30 @@
-const { Resend } = require('resend');
+const SibApiV3Sdk = require('@getbrevo/brevo');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+let apiKey = apiInstance.authentications['apiKey'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
-const sendVerificationEmail = async (email, firstName, code) => {
+const sendVerificationEmail = async (toEmail, firstName, code) => {
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.subject = '💘 Vérifiez votre email — Love Alert';
+  sendSmtpEmail.htmlContent = `
+    <div style="font-family: Arial, sans-serif; background: #0d0a12; color: #fff; padding: 40px;">
+      <h1 style="color: #FF3366;">Love Alert</h1>
+      <h2>Bonjour ${firstName},</h2>
+      <p>Votre code de vérification est : <strong style="font-size: 28px;">${code}</strong></p>
+      <p>Ce code expire dans 10 minutes.</p>
+      <p>À très vite sur Love Alert !</p>
+    </div>
+  `;
+  sendSmtpEmail.sender = { name: 'Love Alert', email: 'noreply@lovealert.com' };
+  sendSmtpEmail.to = [{ email: toEmail, name: firstName }];
+
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Love Alert <onboarding@resend.dev>',
-      to: email,
-      subject: '💘 Vérifiez votre email — Love Alert',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #0d0a12; color: #fff; padding: 40px; border-radius: 20px;">
-          <h1 style="color: #FF3366; text-align: center;">💘 Love Alert</h1>
-          <h2 style="text-align: center;">Bonjour ${firstName} !</h2>
-          <p style="color: rgba(255,255,255,0.7); text-align: center;">
-            Voici votre code de vérification :
-          </p>
-          <div style="background: #FF3366; border-radius: 14px; padding: 20px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #fff; font-size: 40px; letter-spacing: 10px; margin: 0;">
-              ${code}
-            </h1>
-          </div>
-          <p style="color: rgba(255,255,255,0.4); text-align: center; font-size: 12px;">
-            Ce code expire dans 10 minutes.<br/>
-            Si vous n'avez pas créé de compte, ignorez cet email.
-          </p>
-        </div>
-      `,
-    });
-
-    if (error) {
-      console.log('❌ Email error:', error);
-      return false;
-    }
-
-    console.log('✅ Email sent:', data);
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log('✅ Email sent:', response);
     return true;
   } catch (err) {
-    console.log('❌ Email error:', err.message);
+    console.log('❌ Email error:', err.response?.body || err.message);
     return false;
   }
 };
