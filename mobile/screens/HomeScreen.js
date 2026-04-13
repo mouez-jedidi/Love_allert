@@ -183,10 +183,10 @@ return () => {
 const userStr = await AsyncStorage.getItem('user');
 const user = userStr ? JSON.parse(userStr) : null;
 if (user) {
-  onNewMatch(user.id, (data) => {
-    console.log('💘 New match received via socket!', data);
-    navigation.navigate('Match', { matchId: data.matchId });
-  });
+onNewMatch((data) => {
+  console.log('💘 New match received via socket!', data);
+  navigation.navigate('Match', { matchId: data.matchId });
+});
 }
       await registerForNotifications();
 

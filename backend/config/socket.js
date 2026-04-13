@@ -40,6 +40,7 @@ module.exports = (io) => {
 // Export helper to emit to a specific user
 module.exports.emitToUser = (io, userId, event, data) => {
   const socketId = users[userId];
+  console.log(`🔔 emitToUser: userId=${userId}, socketId=${socketId}`);
   if (socketId) {
     io.to(socketId).emit(event, data);
     return true;

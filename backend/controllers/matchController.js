@@ -74,17 +74,18 @@ exports.checkNearby = async (req, res) => {
           existingPendingMatch = existingMatch;
           const isUser1 = existingMatch.user1.toString() === req.user.id;
           const otherUserId = isUser1 ? existingMatch.user2 : existingMatch.user1;
-          // Si l'utilisateur courant a déjà accepté/refusé, alors l'autre n'a pas répondu
           const currentResponse = isUser1 ? existingMatch.user1Accepted : existingMatch.user2Accepted;
           if (currentResponse !== null) {
-            // L'autre utilisateur n'a pas encore répondu → lui renvoyer la notification
+            // L'autre utilisateur n'a pas répondu → lui renvoyer la notification
             const io = req.app.get('io');
             const { emitToUser } = require('../config/socket');
             if (io) {
               emitToUser(io, otherUserId.toString(), 'newMatch', { matchId: existingMatch._id });
             }
-            if (nearUser.fcmToken) {
-              await sendMatchNotification(nearUser.fcmToken, existingMatch._id);
+            // Notification push à l'autre utilisateur
+            const otherUser = await User.findById(otherUserId);
+            if (otherUser && otherUser.fcmToken) {
+              await sendMatchNotification(otherUser.fcmToken, existingMatch._id);
             }
           }
         }
@@ -106,21 +107,26 @@ exports.checkNearby = async (req, res) => {
         compatibilityScore: bestScore,
       });
 
-      // Notifications push
-      if (bestMatch.fcmToken) {
-        await sendMatchNotification(bestMatch.fcmToken, createdMatch._id);
+      const io = req.app.get('io');
+      const { emitToUser } = require('../config/socket');
+
+      // Notifications pour l'utilisateur courant
+      if (io) {
+        emitToUser(io, req.user.id, 'newMatch', { matchId: createdMatch._id });
       }
       if (currentUser.fcmToken) {
         await sendMatchNotification(currentUser.fcmToken, createdMatch._id);
       }
 
-      // Notifications socket directes via emitToUser
-      const io = req.app.get('io');
-      const { emitToUser } = require('../config/socket');
+      // Notifications pour l'autre utilisateur
       if (io) {
-        emitToUser(io, req.user.id, 'newMatch', { matchId: createdMatch._id });
         emitToUser(io, bestMatch._id, 'newMatch', { matchId: createdMatch._id });
       }
+      if (bestMatch.fcmToken) {
+        await sendMatchNotification(bestMatch.fcmToken, createdMatch._id);
+      }
+
+      console.log(`✅ Match créé : ${createdMatch._id} entre ${req.user.id} et ${bestMatch._id}`);
     }
 
     res.json({ matches: createdMatch ? [{ matchId: createdMatch._id, score: bestScore }] : [] });
