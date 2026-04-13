@@ -72,3 +72,16 @@ export const onMatchAccepted = (callback) => {
 export const offMatchAccepted = () => {
   if (socket) socket.off('matchAccepted');
 };
+export const onNewMatch = (userId, callback) => {
+  if (socket) {
+    socket.on('newMatch', (data) => {
+      if (data.userId === userId) {
+        callback(data);
+      }
+    });
+  }
+};
+
+export const offNewMatch = () => {
+  if (socket) socket.off('newMatch');
+};

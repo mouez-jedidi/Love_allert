@@ -1,6 +1,7 @@
 const Match = require('../models/Match');
 const User = require('../models/User');
 const { sendMatchNotification } = require('../config/firebase');
+
 // Calculate compatibility score
 const calculateScore = (user1, user2) => {
   let score = 0;
@@ -34,7 +35,6 @@ exports.checkNearby = async (req, res) => {
     const currentUser = await User.findById(req.user.id);
     const maxDistance = currentUser.maxDistance || 500;
 
-    // Find nearby opposite sex users
     const nearbyUsers = await User.find({
       _id: { $ne: req.user.id },
       sex: currentUser.sex === 'Homme' ? 'Femme' : 'Homme',
@@ -52,46 +52,56 @@ exports.checkNearby = async (req, res) => {
       },
     });
 
-    const matches = [];
+    let bestMatch = null;
+    let bestScore = 0;
 
     for (const nearUser of nearbyUsers) {
-      // Check if match already exists
+      // Vérifier les préférences d'âge de l'autre utilisateur
+      if (
+        currentUser.age < nearUser.minAge ||
+        currentUser.age > nearUser.maxAge
+      ) continue;
+
       const existingMatch = await Match.findOne({
         $or: [
           { user1: req.user.id, user2: nearUser._id },
           { user1: nearUser._id, user2: req.user.id },
         ],
       });
-
       if (existingMatch) continue;
 
-      // Calculate score
       const score = calculateScore(currentUser, nearUser);
-
-      if (score >= 30) {
-        // Create match
-        const match = await Match.create({
-          user1: req.user.id,
-          user2: nearUser._id,
-          compatibilityScore: score,
-        });
-
-// Send notifications to both users
-if (currentUser.fcmToken) {
-  await sendMatchNotification(currentUser.fcmToken, match._id.toString());
-}
-if (nearUser.fcmToken) {
-  await sendMatchNotification(nearUser.fcmToken, match._id.toString());
-}
-
-matches.push({
-  matchId: match._id,
-  score,
-});
+      if (score >= 10 && score > bestScore) {
+        bestScore = score;
+        bestMatch = nearUser;
       }
     }
 
-    res.json({ matches });
+    let createdMatch = null;
+    if (bestMatch) {
+      createdMatch = await Match.create({
+        user1: req.user.id,
+        user2: bestMatch._id,
+        compatibilityScore: bestScore,
+      });
+
+      // Notifications push
+      if (bestMatch.fcmToken) {
+        await sendMatchNotification(bestMatch.fcmToken, createdMatch._id);
+      }
+      if (currentUser.fcmToken) {
+        await sendMatchNotification(currentUser.fcmToken, createdMatch._id);
+      }
+
+      // Notifications socket
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('newMatch', { matchId: createdMatch._id, userId: req.user.id });
+        io.emit('newMatch', { matchId: createdMatch._id, userId: bestMatch._id });
+      }
+    }
+
+    res.json({ matches: createdMatch ? [{ matchId: createdMatch._id, score: bestScore }] : [] });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -122,20 +132,19 @@ exports.respondToMatch = async (req, res) => {
     }
 
     await match.save();
-// After match.save(), before res.json(...)
-// After match.save(), before res.json(...)
-const io = req.app.get('io');
-const socketModule = require('../config/socket');
 
-if (match.status === 'active') {
-  // Notify both users that match is now active
-  if (socketModule.emitToUser) {
-    socketModule.emitToUser(io, match.user1.toString(), 'matchAccepted', { matchId: match._id });
-    socketModule.emitToUser(io, match.user2.toString(), 'matchAccepted', { matchId: match._id });
-  } else {
-    console.log('⚠️ emitToUser function not available');
-  }
-}
+    const io = req.app.get('io');
+    const socketModule = require('../config/socket');
+
+    if (match.status === 'active') {
+      if (socketModule.emitToUser) {
+        socketModule.emitToUser(io, match.user1.toString(), 'matchAccepted', { matchId: match._id });
+        socketModule.emitToUser(io, match.user2.toString(), 'matchAccepted', { matchId: match._id });
+      } else {
+        console.log('⚠️ emitToUser function not available');
+      }
+    }
+
     res.json({
       match,
       chatOpen: match.status === 'active',
@@ -210,6 +219,7 @@ exports.getMyMatches = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 // @route GET /api/matches/:id/trust-info
 exports.getTrustInfo = async (req, res) => {
   try {

@@ -4,7 +4,7 @@ import {
 } from '../services/notifications';
 import { useEffect, useRef, useState } from 'react';
 import { startGPS, stopGPS } from '../services/gps';
-import { connectSocket, disconnectSocket } from '../services/socket';
+import { connectSocket, disconnectSocket, onNewMatch, offNewMatch } from '../services/socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNav from '../components/BottomNav';
 import { API_URL } from '../config';
@@ -91,10 +91,11 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     initApp();
-    return () => {
-      stopGPS();
-      disconnectSocket();
-    };
+return () => {
+  stopGPS();
+  disconnectSocket();
+  offNewMatch();
+};
   }, []);
 
   const initApp = async () => {
@@ -178,6 +179,15 @@ export default function HomeScreen({ navigation }) {
       }
 
       await connectSocket();
+      // Listen for matches from server (for BOTH users)
+const userStr = await AsyncStorage.getItem('user');
+const user = userStr ? JSON.parse(userStr) : null;
+if (user) {
+  onNewMatch(user.id, (data) => {
+    console.log('💘 New match received via socket!', data);
+    navigation.navigate('Match', { matchId: data.matchId });
+  });
+}
       await registerForNotifications();
 
       onNotificationResponse((response) => {

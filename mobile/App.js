@@ -77,15 +77,11 @@ export default function App() {
         return;
       }
 
-      if (!me.photo) {
-        setInitialRoute('Profile');
-      } else if (!me.isEmailVerified) {
-        await AsyncStorage.setItem('pendingEmail', me.email);
-        setInitialRoute('VerifyEmail');
-      } else {
-        setInitialRoute('Home');
-      }
-
+if (!me.photo) {
+  setInitialRoute('Profile');
+} else {
+  setInitialRoute('Home');
+}
     } catch (err) {
       console.log('checkAuth error:', err.message);
       const token = await AsyncStorage.getItem('token');
