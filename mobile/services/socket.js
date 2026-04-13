@@ -44,10 +44,14 @@ export const sendSocketMessage = (matchId, senderId, text) => {
   if (socket) socket.emit('sendMessage', { matchId, senderId, text });
 };
 
+// Remplace ta fonction onReceiveMessage par celle-ci
 export const onReceiveMessage = (callback) => {
   if (socket) {
-    socket.off('receiveMessage');
-    socket.on('receiveMessage', callback);
+    socket.off('receiveMessage'); // 👈 TRÈS IMPORTANT : on supprime l'écouteur précédent avant d'en créer un nouveau
+    socket.on('receiveMessage', (data) => {
+      console.log("📩 Message reçu par le socket");
+      callback(data);
+    });
   }
 };
 

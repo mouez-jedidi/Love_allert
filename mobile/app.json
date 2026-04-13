@@ -7,16 +7,39 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-"splash": {
-  "resizeMode": "contain",
-  "backgroundColor": "#0d0a12"
-},
+    "backgroundColor": "#0d0a12",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0a12"
+    },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lovealert.app"
+      "bundleIdentifier": "com.lovealert.app",
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
+        "NSLocationAlwaysUsageDescription": "Love Alert a besoin de votre position pour vous signaler des rencontres même quand l'application est fermée.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Love Alert utilise votre position pour détecter les profils à proximité en temps réel."
+      }
     },
     "android": {
-      "package": "com.lovealert.app"
+      "package": "com.lovealert.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "WAKE_LOCK"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0d0a12"
+      }
     },
     "extra": {
       "eas": {

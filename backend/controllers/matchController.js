@@ -1,7 +1,7 @@
 const Match = require('../models/Match');
 const User = require('../models/User');
-const { sendMatchNotification } = require('../config/firebase');
-const { getOnlineUsers, emitToUser } = require('../config/socket'); // Importer getOnlineUsers
+const { sendPushNotification } = require('../services/notificationService'); // Notre nouveau service
+const { getOnlineUsers, emitToUser } = require('../config/socket');
 // Calculate compatibility score
 const calculateScore = (user1, user2) => {
   let score = 0;
@@ -33,17 +33,16 @@ const calculateScore = (user1, user2) => {
 exports.checkNearby = async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
-    const onlineUserIds = getOnlineUsers(); // Récupérer uniquement les gens connectés au socket
+    const onlineUserIds = getOnlineUsers();
 
-    // On cherche les utilisateurs proches ET connectés
     const nearbyUsers = await User.find({
-      _id: { $ne: req.user.id, $in: onlineUserIds }, // Uniquement ceux en ligne
+      _id: { $ne: req.user.id, $in: onlineUserIds },
       sex: currentUser.sex === 'Homme' ? 'Femme' : 'Homme',
       age: { $gte: currentUser.minAge, $lte: currentUser.maxAge },
       location: {
         $near: {
           $geometry: { type: 'Point', coordinates: currentUser.location.coordinates },
-          $maxDistance: 50, // Distance réduite pour le "Nearby" (ex: 50m)
+          $maxDistance: 50, 
         },
       },
     });
@@ -51,7 +50,6 @@ exports.checkNearby = async (req, res) => {
     let matchProposal = null;
 
     for (const nearUser of nearbyUsers) {
-      // 1. Vérifier si un match (même refusé ou expiré) existe déjà pour éviter de spammer
       const existingMatch = await Match.findOne({
         $or: [
           { user1: req.user.id, user2: nearUser._id },
@@ -61,69 +59,72 @@ exports.checkNearby = async (req, res) => {
 
       if (existingMatch) continue; 
 
-      // 2. Calcul du score
       const score = calculateScore(currentUser, nearUser);
-      
       if (score >= 10) {
         matchProposal = nearUser;
-        break; // On s'arrête au premier trouvé pour cette itération
+        break; 
       }
     }
 
     if (matchProposal) {
       const io = req.app.get('io');
+      const score = calculateScore(currentUser, matchProposal);
 
-      // CRÉATION DU MATCH EN "PENDING" (Attente de validation des deux)
-      // On le crée ici mais avec status: 'pending' et les deux accepted: null
       const newMatch = await Match.create({
         user1: req.user.id,
         user2: matchProposal._id,
-        compatibilityScore: calculateScore(currentUser, matchProposal),
+        compatibilityScore: score,
         status: 'pending',
         user1Accepted: null,
         user2Accepted: null
       });
 
-      // ENVOI SIMULTANÉ AUX DEUX UTILISATEURS
       const matchData = { 
         matchId: newMatch._id, 
         distance: "Très proche", 
-        score: newMatch.compatibilityScore 
+        score: score 
       };
 
-      // Vers l'utilisateur 1 (celui qui a déclenché le check)
+      // 1. Sockets (Si l'app est ouverte)
       emitToUser(io, req.user.id, 'newMatch', matchData);
-      
-      // Vers l'utilisateur 2 (celui qui est à côté)
       emitToUser(io, matchProposal._id, 'newMatch', matchData);
 
-      return res.json({ message: "Match proposé aux deux utilisateurs", matchId: newMatch._id });
+      // 2. Push Notification (Si l'app est fermée)
+      // On prévient surtout l'autre utilisateur (matchProposal) qu'une alerte est proche
+      if (matchProposal.fcmToken) {
+        await sendPushNotification(
+          matchProposal.fcmToken,
+          "Alerte Proximité ! 🔥",
+          "Quelqu'un qui vous correspond est tout près...",
+          { matchId: newMatch._id, type: 'NEW_MATCH' }
+        );
+      }
+
+      return res.json({ message: "Match proposé", matchId: newMatch._id });
     }
 
-    res.json({ message: "Aucun utilisateur à proximité immédiate" });
+    res.json({ message: "Aucun utilisateur à proximité" });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };
+
 // @route PUT /api/matches/:id/respond
 exports.respondToMatch = async (req, res) => {
   try {
     const { accepted } = req.body;
-    const match = await Match.findById(req.params.id);
+    const match = await Match.findById(req.params.id)
+      .populate('user1')
+      .populate('user2');
 
-    if (!match) {
-      return res.status(404).json({ message: 'Match non trouvé' });
-    }
+    if (!match) return res.status(404).json({ message: 'Match non trouvé' });
 
-    // Set response
-    if (match.user1.toString() === req.user.id) {
+    if (match.user1._id.toString() === req.user.id) {
       match.user1Accepted = accepted;
     } else {
       match.user2Accepted = accepted;
     }
 
-    // Check if both responded
     if (match.user1Accepted === true && match.user2Accepted === true) {
       match.status = 'active';
     } else if (match.user1Accepted === false || match.user2Accepted === false) {
@@ -133,21 +134,29 @@ exports.respondToMatch = async (req, res) => {
     await match.save();
 
     const io = req.app.get('io');
-    const socketModule = require('../config/socket');
 
     if (match.status === 'active') {
-      if (socketModule.emitToUser) {
-        socketModule.emitToUser(io, match.user1.toString(), 'matchAccepted', { matchId: match._id });
-        socketModule.emitToUser(io, match.user2.toString(), 'matchAccepted', { matchId: match._id });
-      } else {
-        console.log('⚠️ emitToUser function not available');
-      }
+      // Sockets
+      emitToUser(io, match.user1._id.toString(), 'matchAccepted', { matchId: match._id });
+      emitToUser(io, match.user2._id.toString(), 'matchAccepted', { matchId: match._id });
+
+      // Push Notifications : Prévenir les deux que le chat est ouvert !
+      const sendTo = (user, other) => {
+        if (user.fcmToken) {
+          sendPushNotification(
+            user.fcmToken,
+            "Match validé ! ❤️",
+            `C'est réciproque ! Vous pouvez maintenant discuter.`,
+            { matchId: match._id, type: 'MATCH_ACTIVE' }
+          );
+        }
+      };
+
+      sendTo(match.user1, match.user2);
+      sendTo(match.user2, match.user1);
     }
 
-    res.json({
-      match,
-      chatOpen: match.status === 'active',
-    });
+    res.json({ match, chatOpen: match.status === 'active' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -4,6 +4,7 @@ import {
   SafeAreaView, TouchableOpacity,
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { registerForNotifications, onNotificationResponse } from '../services/notifications';
@@ -12,7 +13,49 @@ import { connectSocket, disconnectSocket, onNewMatch, offNewMatch } from '../ser
 import BottomNav from '../components/BottomNav';
 import { API_URL } from '../config';
 
+// Nom de la tâche de fond
+const LOCATION_TASK_NAME = 'background-location-task';
+
+// --- DÉFINITION DE LA TÂCHE DE FOND (En dehors du composant) ---
+TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+  if (error) {
+    console.error("Erreur TaskManager:", error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    const { latitude, longitude } = locations[0].coords;
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      // 1. Mettre à jour la position sur le serveur
+      await fetch(`${API_URL}/users/location`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ latitude, longitude }),
+      });
+
+      // 2. Lancer la vérification de proximité (le serveur enverra un Push si Match)
+      await fetch(`${API_URL}/matches/check-nearby`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+    } catch (err) {
+      console.log("Erreur background task:", err.message);
+    }
+  }
+});
+
 export default function HomeScreen({ navigation }) {
+  // --- REFS POUR LES ANIMATIONS ---
   const pulse1 = useRef(new Animated.Value(1)).current;
   const pulse2 = useRef(new Animated.Value(1)).current;
   const pulse3 = useRef(new Animated.Value(1)).current;
@@ -20,10 +63,11 @@ export default function HomeScreen({ navigation }) {
   const opacity1 = useRef(new Animated.Value(0.6)).current;
   const opacity2 = useRef(new Animated.Value(0.4)).current;
   const opacity3 = useRef(new Animated.Value(0.2)).current;
+  
   const [currentLocation, setCurrentLocation] = useState('Détection...');
 
   useEffect(() => {
-    // Animations de cercles et de coeur
+    // --- DÉMARRAGE DES ANIMATIONS ---
     const pulseRing = (scale, opacity, delay) => {
       Animated.loop(
         Animated.sequence([
@@ -77,15 +121,31 @@ export default function HomeScreen({ navigation }) {
       const me = await res.json();
       if (!me.photo) return navigation.replace('Profile');
 
-      // --- LOGIQUE GPS ---
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
+      // --- CONFIGURATION GPS (PREMIER PLAN + ARRIÈRE-PLAN) ---
+      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+      
+      if (fgStatus === 'granted') {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        // Simpification de la détection de région (ta liste REGION_COORDS reste identique)
-        setCurrentLocation("Connecté"); 
+        setCurrentLocation("Scanner actif");
+
+        // Demander la permission arrière-plan pour le mode "WhatsApp"
+        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+        
+        if (bgStatus === 'granted') {
+          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 60000, // Toutes les 60 secondes
+            distanceInterval: 30, // Ou tous les 30 mètres
+            foregroundService: {
+              notificationTitle: "Love Alert est en recherche",
+              notificationBody: "Nous surveillons les profils à proximité...",
+              notificationColor: "#D9A066",
+            },
+          });
+        }
       }
 
-      // --- SOCKET ET MATCHING ---
+      // --- SOCKET ET MATCHING (TEMPS RÉEL) ---
       await connectSocket();
       
       onNewMatch((data) => {
@@ -93,15 +153,11 @@ export default function HomeScreen({ navigation }) {
         navigation.navigate('Match', { matchId: data.matchId });
       });
 
+      // --- NOTIFICATIONS PUSH ---
       await registerForNotifications();
       onNotificationResponse((response) => {
         const matchId = response?.notification?.request?.content?.data?.matchId;
         if (matchId) navigation.navigate('Match', { matchId });
-      });
-
-      // Démarrer le scan GPS via ton service
-      await startGPS((match) => {
-        navigation.navigate('Match', { matchId: match.matchId });
       });
 
     } catch (err) {
@@ -145,7 +201,6 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-// ... Tes styles restent identiques
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#050505' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16 },
@@ -156,7 +211,7 @@ const styles = StyleSheet.create({
     profileBtnText: { color: '#FFFFFF', fontSize: 10, fontWeight: '600' },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     ring: { position: 'absolute', width: 180, height: 180, borderRadius: 90, borderWidth: 1.5, borderColor: '#D9A066' },
-    heartContainer: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#D9A066', alignItems: 'center', justifyContent: 'center', elevation: 15 },
+    heartContainer: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#D9A066', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
     heartSymbol: { fontSize: 44, color: '#050505' },
     statusContainer: { alignItems: 'center', paddingHorizontal: 32, marginBottom: 80 },
     statusTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', letterSpacing: 3, marginBottom: 10 },

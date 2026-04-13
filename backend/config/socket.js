@@ -9,10 +9,11 @@ module.exports = (io) => {
     });
 
     socket.on('sendMessage', ({ matchId, senderId, text }) => {
-      io.to(matchId).emit('receiveMessage', {
-        senderId, text,
-        time: new Date().toISOString(),
-      });
+ socket.to(matchId).emit('receiveMessage', { // 👈 "socket.to" envoie à tout le monde SAUF à l'expéditeur
+    senderId, 
+    text,
+    time: new Date().toISOString(),
+});
     });
 
     socket.on('joinRoom', (matchId) => {

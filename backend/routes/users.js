@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const {
-  updateProfile, updateLocation,
-  getNearbyUsers, blockUser,
-  deleteAccount, reportUser,
-  addToGallery, removeFromGallery,
-  getUserGallery, getBlockedUsers, unblockUser,getUserById,updateFcmToken,
+  updateProfile, updateLocation, getNearbyUsers, blockUser,
+  deleteAccount, reportUser, addToGallery, removeFromGallery,
+  getUserGallery, getBlockedUsers, unblockUser, getUserById, updateFcmToken,
 } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 
+// --- ROUTES ---
 router.put('/profile', auth, updateProfile);
 router.put('/location', auth, updateLocation);
 router.get('/nearby', auth, getNearbyUsers);
@@ -21,5 +20,8 @@ router.get('/:id/gallery', auth, getUserGallery);
 router.get('/blocked', auth, getBlockedUsers);
 router.post('/unblock/:id', auth, unblockUser);
 router.get('/:id', auth, getUserById);
-router.put('/update-fcm-token', auth, updateFcmToken);
+
+// UNE SEULE FOIS ICI :
+router.put('/update-fcm-token', auth, updateFcmToken); 
+
 module.exports = router;
