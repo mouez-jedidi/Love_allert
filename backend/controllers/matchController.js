@@ -54,6 +54,7 @@ exports.checkNearby = async (req, res) => {
 
     let bestMatch = null;
     let bestScore = 0;
+    let existingPendingMatch = null;
 
     for (const nearUser of nearbyUsers) {
       // Vérifier les préférences d'âge de l'autre utilisateur
@@ -68,7 +69,32 @@ exports.checkNearby = async (req, res) => {
           { user1: nearUser._id, user2: req.user.id },
         ],
       });
-      if (existingMatch) continue;
+
+      if (existingMatch) {
+        // Si le match existe mais n'est pas encore actif (pending)
+        if (existingMatch.status === 'pending') {
+          existingPendingMatch = existingMatch;
+          // Déterminer quel utilisateur n'a pas encore répondu
+          const isUser1 = existingMatch.user1.toString() === req.user.id;
+          const otherUser = isUser1 ? nearUser : currentUser;
+          const currentUserAccepted = isUser1 ? existingMatch.user1Accepted : existingMatch.user2Accepted;
+          if (currentUserAccepted === null) {
+            // L'utilisateur courant n'a pas encore répondu → on ne fait rien (il est actif)
+            // Sinon, c'est l'autre qui n'a pas répondu → on lui renvoie la notification
+            if (currentUserAccepted !== null) {
+              // Renvoyer la notification à l'autre utilisateur
+              const io = req.app.get('io');
+              if (io) {
+                io.emit('newMatch', { matchId: existingMatch._id, userId: otherUser._id });
+              }
+              if (otherUser.fcmToken) {
+                await sendMatchNotification(otherUser.fcmToken, existingMatch._id);
+              }
+            }
+          }
+        }
+        continue; // On ne crée pas de nouveau match
+      }
 
       const score = calculateScore(currentUser, nearUser);
       if (score >= 10 && score > bestScore) {
@@ -106,7 +132,6 @@ exports.checkNearby = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 // @route PUT /api/matches/:id/respond
 exports.respondToMatch = async (req, res) => {
   try {
