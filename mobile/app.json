@@ -2,14 +2,15 @@
   "expo": {
     "name": "Love Alert",
     "slug": "love-alert",
+    "owner": "love_alert",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#0d0a12"
-    },
+"splash": {
+  "resizeMode": "contain",
+  "backgroundColor": "#0d0a12"
+},
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.lovealert.app"
@@ -19,7 +20,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "5e62d22d-7e18-40a7-9fc6-a7f593cc8a94"
+        "projectId": "725569d6-cbf3-4969-bee4-27379991cf71"
       }
     }
   }
