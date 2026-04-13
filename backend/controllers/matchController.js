@@ -57,7 +57,6 @@ exports.checkNearby = async (req, res) => {
     let existingPendingMatch = null;
 
     for (const nearUser of nearbyUsers) {
-      // Vérifier les préférences d'âge de l'autre utilisateur
       if (
         currentUser.age < nearUser.minAge ||
         currentUser.age > nearUser.maxAge
@@ -71,29 +70,25 @@ exports.checkNearby = async (req, res) => {
       });
 
       if (existingMatch) {
-        // Si le match existe mais n'est pas encore actif (pending)
         if (existingMatch.status === 'pending') {
           existingPendingMatch = existingMatch;
-          // Déterminer quel utilisateur n'a pas encore répondu
           const isUser1 = existingMatch.user1.toString() === req.user.id;
-          const otherUser = isUser1 ? nearUser : currentUser;
-          const currentUserAccepted = isUser1 ? existingMatch.user1Accepted : existingMatch.user2Accepted;
-          if (currentUserAccepted === null) {
-            // L'utilisateur courant n'a pas encore répondu → on ne fait rien (il est actif)
-            // Sinon, c'est l'autre qui n'a pas répondu → on lui renvoie la notification
-            if (currentUserAccepted !== null) {
-              // Renvoyer la notification à l'autre utilisateur
-              const io = req.app.get('io');
-              if (io) {
-                io.emit('newMatch', { matchId: existingMatch._id, userId: otherUser._id });
-              }
-              if (otherUser.fcmToken) {
-                await sendMatchNotification(otherUser.fcmToken, existingMatch._id);
-              }
+          const otherUserId = isUser1 ? existingMatch.user2 : existingMatch.user1;
+          // Si l'utilisateur courant a déjà accepté/refusé, alors l'autre n'a pas répondu
+          const currentResponse = isUser1 ? existingMatch.user1Accepted : existingMatch.user2Accepted;
+          if (currentResponse !== null) {
+            // L'autre utilisateur n'a pas encore répondu → lui renvoyer la notification
+            const io = req.app.get('io');
+            const { emitToUser } = require('../config/socket');
+            if (io) {
+              emitToUser(io, otherUserId.toString(), 'newMatch', { matchId: existingMatch._id });
+            }
+            if (nearUser.fcmToken) {
+              await sendMatchNotification(nearUser.fcmToken, existingMatch._id);
             }
           }
         }
-        continue; // On ne crée pas de nouveau match
+        continue;
       }
 
       const score = calculateScore(currentUser, nearUser);
@@ -119,16 +114,18 @@ exports.checkNearby = async (req, res) => {
         await sendMatchNotification(currentUser.fcmToken, createdMatch._id);
       }
 
-      // Notifications socket
+      // Notifications socket directes via emitToUser
       const io = req.app.get('io');
+      const { emitToUser } = require('../config/socket');
       if (io) {
-        io.emit('newMatch', { matchId: createdMatch._id, userId: req.user.id });
-        io.emit('newMatch', { matchId: createdMatch._id, userId: bestMatch._id });
+        emitToUser(io, req.user.id, 'newMatch', { matchId: createdMatch._id });
+        emitToUser(io, bestMatch._id, 'newMatch', { matchId: createdMatch._id });
       }
     }
 
     res.json({ matches: createdMatch ? [{ matchId: createdMatch._id, score: bestScore }] : [] });
   } catch (err) {
+    console.error('checkNearby error:', err);
     res.status(500).json({ message: err.message });
   }
 };
