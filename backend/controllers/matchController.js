@@ -1,7 +1,7 @@
 const Match = require('../models/Match');
 const User = require('../models/User');
 const { sendMatchNotification } = require('../config/firebase');
-
+const { getOnlineUsers, emitToUser } = require('../config/socket'); // Importer getOnlineUsers
 // Calculate compatibility score
 const calculateScore = (user1, user2) => {
   let score = 0;
@@ -33,35 +33,25 @@ const calculateScore = (user1, user2) => {
 exports.checkNearby = async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
-    const maxDistance = currentUser.maxDistance || 500;
+    const onlineUserIds = getOnlineUsers(); // Récupérer uniquement les gens connectés au socket
 
+    // On cherche les utilisateurs proches ET connectés
     const nearbyUsers = await User.find({
-      _id: { $ne: req.user.id },
+      _id: { $ne: req.user.id, $in: onlineUserIds }, // Uniquement ceux en ligne
       sex: currentUser.sex === 'Homme' ? 'Femme' : 'Homme',
       age: { $gte: currentUser.minAge, $lte: currentUser.maxAge },
-      isActive: true,
-      blockedUsers: { $ne: req.user.id },
       location: {
         $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: currentUser.location.coordinates,
-          },
-          $maxDistance: maxDistance,
+          $geometry: { type: 'Point', coordinates: currentUser.location.coordinates },
+          $maxDistance: 50, // Distance réduite pour le "Nearby" (ex: 50m)
         },
       },
     });
 
-    let bestMatch = null;
-    let bestScore = 0;
-    let existingPendingMatch = null;
+    let matchProposal = null;
 
     for (const nearUser of nearbyUsers) {
-      if (
-        currentUser.age < nearUser.minAge ||
-        currentUser.age > nearUser.maxAge
-      ) continue;
-
+      // 1. Vérifier si un match (même refusé ou expiré) existe déjà pour éviter de spammer
       const existingMatch = await Match.findOne({
         $or: [
           { user1: req.user.id, user2: nearUser._id },
@@ -69,69 +59,50 @@ exports.checkNearby = async (req, res) => {
         ],
       });
 
-      if (existingMatch) {
-        if (existingMatch.status === 'pending') {
-          existingPendingMatch = existingMatch;
-          const isUser1 = existingMatch.user1.toString() === req.user.id;
-          const otherUserId = isUser1 ? existingMatch.user2 : existingMatch.user1;
-          const currentResponse = isUser1 ? existingMatch.user1Accepted : existingMatch.user2Accepted;
-          if (currentResponse !== null) {
-            // L'autre utilisateur n'a pas répondu → lui renvoyer la notification
-            const io = req.app.get('io');
-            const { emitToUser } = require('../config/socket');
-            if (io) {
-              emitToUser(io, otherUserId.toString(), 'newMatch', { matchId: existingMatch._id });
-            }
-            // Notification push à l'autre utilisateur
-            const otherUser = await User.findById(otherUserId);
-            if (otherUser && otherUser.fcmToken) {
-              await sendMatchNotification(otherUser.fcmToken, existingMatch._id);
-            }
-          }
-        }
-        continue;
-      }
+      if (existingMatch) continue; 
 
+      // 2. Calcul du score
       const score = calculateScore(currentUser, nearUser);
-      if (score >= 10 && score > bestScore) {
-        bestScore = score;
-        bestMatch = nearUser;
+      
+      if (score >= 10) {
+        matchProposal = nearUser;
+        break; // On s'arrête au premier trouvé pour cette itération
       }
     }
 
-    let createdMatch = null;
-    if (bestMatch) {
-      createdMatch = await Match.create({
+    if (matchProposal) {
+      const io = req.app.get('io');
+
+      // CRÉATION DU MATCH EN "PENDING" (Attente de validation des deux)
+      // On le crée ici mais avec status: 'pending' et les deux accepted: null
+      const newMatch = await Match.create({
         user1: req.user.id,
-        user2: bestMatch._id,
-        compatibilityScore: bestScore,
+        user2: matchProposal._id,
+        compatibilityScore: calculateScore(currentUser, matchProposal),
+        status: 'pending',
+        user1Accepted: null,
+        user2Accepted: null
       });
 
-      const io = req.app.get('io');
-      const { emitToUser } = require('../config/socket');
+      // ENVOI SIMULTANÉ AUX DEUX UTILISATEURS
+      const matchData = { 
+        matchId: newMatch._id, 
+        distance: "Très proche", 
+        score: newMatch.compatibilityScore 
+      };
 
-      // Notifications pour l'utilisateur courant
-      if (io) {
-        emitToUser(io, req.user.id, 'newMatch', { matchId: createdMatch._id });
-      }
-      if (currentUser.fcmToken) {
-        await sendMatchNotification(currentUser.fcmToken, createdMatch._id);
-      }
+      // Vers l'utilisateur 1 (celui qui a déclenché le check)
+      emitToUser(io, req.user.id, 'newMatch', matchData);
+      
+      // Vers l'utilisateur 2 (celui qui est à côté)
+      emitToUser(io, matchProposal._id, 'newMatch', matchData);
 
-      // Notifications pour l'autre utilisateur
-      if (io) {
-        emitToUser(io, bestMatch._id, 'newMatch', { matchId: createdMatch._id });
-      }
-      if (bestMatch.fcmToken) {
-        await sendMatchNotification(bestMatch.fcmToken, createdMatch._id);
-      }
-
-      console.log(`✅ Match créé : ${createdMatch._id} entre ${req.user.id} et ${bestMatch._id}`);
+      return res.json({ message: "Match proposé aux deux utilisateurs", matchId: newMatch._id });
     }
 
-    res.json({ matches: createdMatch ? [{ matchId: createdMatch._id, score: bestScore }] : [] });
+    res.json({ message: "Aucun utilisateur à proximité immédiate" });
   } catch (err) {
-    console.error('checkNearby error:', err);
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };
