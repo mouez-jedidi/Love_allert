@@ -94,6 +94,7 @@ exports.getUserById = async (req, res) => {
 exports.updateFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
+    console.log('📲 Token reçu:', fcmToken); 
     if (!fcmToken) {
       return res.status(400).json({ message: 'Token requis' });
     }
