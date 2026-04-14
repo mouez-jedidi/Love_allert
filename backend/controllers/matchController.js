@@ -35,17 +35,20 @@ exports.checkNearby = async (req, res) => {
     const currentUser = await User.findById(req.user.id);
     const onlineUserIds = getOnlineUsers();
 
-    const nearbyUsers = await User.find({
-      _id: { $ne: req.user.id, $in: onlineUserIds },
-      sex: currentUser.sex === 'Homme' ? 'Femme' : 'Homme',
-      age: { $gte: currentUser.minAge, $lte: currentUser.maxAge },
-      location: {
-        $near: {
-          $geometry: { type: 'Point', coordinates: currentUser.location.coordinates },
-          $maxDistance: currentUser.maxDistance || 500,
-        },
+const nearbyUsers = await User.find({
+  _id: { $ne: req.user.id }, // 1. Remove "$in: onlineUserIds" to allow offline matches
+  sex: currentUser.sex === 'Homme' ? 'Femme' : 'Homme',
+  age: { $gte: currentUser.minAge, $lte: currentUser.maxAge },
+  location: {
+    $near: {
+      $geometry: { 
+        type: 'Point', 
+        coordinates: currentUser.location.coordinates 
       },
-    });
+      $maxDistance: currentUser.maxDistance || 500,
+    },
+  },
+});
 
     let matchProposal = null;
 

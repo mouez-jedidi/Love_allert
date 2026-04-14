@@ -30,9 +30,14 @@ module.exports = (io) => {
     });
 
 socket.on('disconnect', () => {
-      if (socket.userId) delete users[socket.userId];
-      console.log('❌ User déconnecté');
-    });
+  if (socket.userId) {
+    console.log(`❌ User ${socket.userId} déconnecté`);
+    delete users[socket.userId];
+  } else {
+    // This was likely triggering on every connection attempt before 'join'
+    console.log('💡 Anonymous socket closed'); 
+  }
+});
   });
 };
 // AJOUTE CETTE EXPORTATION pour pouvoir vérifier qui est en ligne
