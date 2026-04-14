@@ -26,6 +26,7 @@ import BlockReportScreen from './screens/BlockReportScreen';
 import GalleryScreen from './screens/GalleryScreen';
 import BlockedUsersScreen from './screens/BlockedUsersScreen';
 import AboutScreen from './screens/AboutScreen';
+import { registerForNotifications } from './services/notifications';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -81,6 +82,8 @@ if (!me.photo) {
   setInitialRoute('Profile');
 } else {
   setInitialRoute('Home');
+  // ✅ Register for notifications now that we have a valid auth token
+  registerForNotifications();
 }
     } catch (err) {
       console.log('checkAuth error:', err.message);

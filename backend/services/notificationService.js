@@ -1,30 +1,34 @@
-const { Expo } = require('expo-server-sdk');
-let expo = new Expo();
+const { Expo } = require('expo-server-sdk'); // ✅ correct named import
+const expo = new Expo();
 
 exports.sendPushNotification = async (targetToken, title, body, data = {}) => {
-  // Vérifier si le token est valide pour Expo
-  if (!Expo.isExpoPushToken(targetToken)) {
-    console.error(`❌ Token de notification invalide : ${targetToken}`);
+  if (!Expo.isExpoPushToken(targetToken)) { // ✅ Expo not __Expo__
+    console.error(`❌ Token invalide : ${targetToken}`);
     return;
   }
 
-  // Préparer le message
   const messages = [{
     to: targetToken,
     sound: 'default',
-    title: title,
-    body: body,
-    data: data, // Utile pour rediriger l'utilisateur vers le bon chat au clic
+    title,
+    body,
+    data,
     priority: 'high',
   }];
 
   try {
-    let chunks = expo.chunkPushNotifications(messages);
-    for (let chunk of chunks) {
-      let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-      console.log('🔔 Notification envoyée avec succès:', ticketChunk);
+    const chunks = expo.chunkPushNotifications(messages);
+    for (const chunk of chunks) {
+      const tickets = await expo.sendPushNotificationsAsync(chunk);
+      console.log('🔔 Ticket:', tickets);
+      // Log errors per ticket
+      tickets.forEach(ticket => {
+        if (ticket.status === 'error') {
+          console.error('❌ Ticket error:', ticket.message, ticket.details);
+        }
+      });
     }
   } catch (error) {
-    console.error('❌ Erreur lors de l\'envoi de la notification:', error);
+    console.error('❌ Erreur envoi notification:', error);
   }
 };

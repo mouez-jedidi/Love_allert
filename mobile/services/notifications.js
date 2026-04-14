@@ -22,40 +22,16 @@ export const registerForNotifications = async () => {
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    
     if (finalStatus !== 'granted') {
       console.log('❌ Permission refusée');
       return null;
     }
 
-    // On utilise l'ID du projet défini dans app.json pour éviter les erreurs
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId || '725569d6-cbf3-4969-bee4-27379991cf71';
-    
-    const token = await Notifications.getExpoPushTokenAsync({ projectId });
-    console.log('📱 Expo Push Token:', token.data);
-    
-    // Sauvegarde sur le backend
-    const authToken = await AsyncStorage.getItem('token');
-    if (authToken) {
-      const response = await fetch(`${API_URL}/users/update-push-token`, { // Nom plus générique
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ pushToken: token.data }), // Utilise pushToken
-      });
-      
-      if (response.ok) {
-        console.log('✅ Token sauvegardé sur le serveur');
-      }
-    }
-    
+    // ✅ Android channel FIRST, before getting the token
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -64,7 +40,29 @@ export const registerForNotifications = async () => {
         lightColor: '#FF3366',
       });
     }
-    
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId || '725569d6-cbf3-4969-bee4-27379991cf71';
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
+    console.log('📱 Expo Push Token:', token.data);
+
+    const authToken = await AsyncStorage.getItem('token');
+    if (authToken) {
+      // ✅ Correct URL and correct key
+      const response = await fetch(`${API_URL}/users/update-fcm-token`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ fcmToken: token.data }),
+      });
+      if (response.ok) {
+        console.log('✅ Token sauvegardé sur le serveur');
+      } else {
+        console.log('❌ Erreur HTTP:', response.status);
+      }
+    }
+
     return token.data;
   } catch (err) {
     console.log('❌ Erreur registerForNotifications:', err.message);

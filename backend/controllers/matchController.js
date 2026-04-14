@@ -42,7 +42,7 @@ exports.checkNearby = async (req, res) => {
       location: {
         $near: {
           $geometry: { type: 'Point', coordinates: currentUser.location.coordinates },
-          $maxDistance: 50, 
+          $maxDistance: currentUser.maxDistance || 500,
         },
       },
     });
@@ -91,14 +91,16 @@ exports.checkNearby = async (req, res) => {
 
       // 2. Push Notification (Si l'app est fermée)
       // On prévient surtout l'autre utilisateur (matchProposal) qu'une alerte est proche
-      if (matchProposal.fcmToken) {
-        await sendPushNotification(
-          matchProposal.fcmToken,
-          "Alerte Proximité ! 🔥",
-          "Quelqu'un qui vous correspond est tout près...",
-          { matchId: newMatch._id, type: 'NEW_MATCH' }
-        );
-      }
+const notifTitle = "Alerte Proximité ! 🔥";
+const notifBody = "Quelqu'un qui vous correspond est tout près...";
+const notifData = { matchId: newMatch._id.toString(), type: 'NEW_MATCH' };
+
+if (matchProposal.fcmToken) {
+  await sendPushNotification(matchProposal.fcmToken, notifTitle, notifBody, notifData);
+}
+if (currentUser.fcmToken) {
+  await sendPushNotification(currentUser.fcmToken, notifTitle, notifBody, notifData);
+}
 
       return res.json({ message: "Match proposé", matchId: newMatch._id });
     }
